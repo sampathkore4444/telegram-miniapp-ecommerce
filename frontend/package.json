@@ -1,0 +1,6 @@
+{
+  "name": "telegram-miniapp-ecommerce-frontend",
+  "private": true,
+  "type": "module",
+  "description": "Vanilla JS frontend served by the FastAPI backend"
+}
