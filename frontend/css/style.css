@@ -254,6 +254,79 @@ h2.sub { font-size: 16px; font-weight: 700; margin: 18px 0 10px; }
 }
 textarea.input { min-height: 84px; resize: vertical; }
 
+/* ---------- Promo code ---------- */
+.coupon-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 6px 6px 6px 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.coupon-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.coupon-box .btn { width: auto; flex-shrink: 0; }
+.coupon-ico { font-size: 17px; line-height: 1; opacity: 0.75; }
+.coupon-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 11px 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+.coupon-input::placeholder {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.coupon-applied {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--green-bg);
+  border: 1px dashed var(--green);
+  border-radius: 14px;
+  padding: 11px 12px;
+  font-size: 14px;
+  animation: coupon-in 0.2s ease;
+}
+.coupon-applied .coupon-ico { color: var(--green); opacity: 1; }
+.coupon-applied-label { color: var(--green); font-weight: 700; }
+.coupon-applied-code { font-weight: 800; letter-spacing: 0.5px; }
+.coupon-applied-amount { margin-left: auto; color: var(--green); font-weight: 800; }
+.coupon-remove {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 5px;
+  margin: -5px;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.coupon-remove:hover { color: var(--red); background: rgba(239, 68, 68, 0.08); }
+.coupon-msg { margin-top: 8px; font-size: 13px; }
+.coupon-msg.ok { color: var(--green); }
+.coupon-msg.err { color: var(--red); }
+
+@keyframes coupon-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ---------- Product grid ---------- */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .product-card {

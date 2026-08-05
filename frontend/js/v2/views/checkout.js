@@ -87,11 +87,19 @@ export async function renderCheckout(root) {
         <div class="divider"></div>
         <div class="row"><span class="row-label">Total</span><span class="total-line" id="total-line">${money(total(), store)}</span></div>
         <div class="divider"></div>
-        <div class="coupon-box">
-          <input class="input grow" id="coupon" placeholder="Have a promo code? Enter it here" style="text-transform:uppercase" />
+        <div class="coupon-box" id="coupon-box">
+          <span class="coupon-ico">&#127873;</span>
+          <input class="coupon-input" id="coupon" placeholder="Have a promo code? Enter it here" autocapitalize="characters" spellcheck="false" autocomplete="off" aria-label="Promo code" />
           <button class="btn btn-outline" id="coupon-btn">Apply</button>
         </div>
-        <p class="small muted" id="coupon-msg" style="margin-top:8px"></p>
+        <div class="coupon-applied" id="coupon-applied" style="display:none">
+          <span class="coupon-ico">&#127873;</span>
+          <span class="coupon-applied-label">Coupon applied</span>
+          <span class="coupon-applied-code" id="coupon-applied-code"></span>
+          <span class="coupon-applied-amount" id="coupon-applied-amount"></span>
+          <button class="coupon-remove" id="coupon-remove" title="Remove coupon" aria-label="Remove coupon">&#10005;</button>
+        </div>
+        <p class="small coupon-msg" id="coupon-msg" role="status" aria-live="polite" hidden></p>
       </div>
 
       <p class="small muted center" style="margin-top:2px">Stock is reserved for ${esc(store.store_name)} once you place the order.</p>
@@ -111,22 +119,29 @@ export async function renderCheckout(root) {
     host.querySelector("#total-line").textContent = money(total(), store);
     host.querySelector("#sticky-total").textContent = money(total(), store);
   };
-  const applyCouponUI = () => {
+  const couponMsg = host.querySelector("#coupon-msg");
+  const setMsg = (html, kind) => {
+    couponMsg.className = `small coupon-msg${kind ? ` ${kind}` : ""}`;
+    couponMsg.innerHTML = html || "";
+    couponMsg.hidden = !html;
+  };
+  const refreshCouponUI = () => {
+    const applied = couponDiscount > 0;
+    host.querySelector("#coupon-box").style.display = applied ? "none" : "";
+    host.querySelector("#coupon-applied").style.display = applied ? "" : "none";
     const row = host.querySelector("#discount-row");
-    if (couponDiscount > 0) {
-      row.style.display = "";
+    row.style.display = applied ? "" : "none";
+    if (applied) {
+      host.querySelector("#coupon-applied-code").textContent = couponCode;
+      host.querySelector("#coupon-applied-amount").textContent = `−${money(couponDiscount, store)}`;
       host.querySelector("#coupon-code").textContent = couponCode;
       host.querySelector("#discount-amount").textContent = `−${money(couponDiscount, store)}`;
-    } else {
-      row.style.display = "none";
     }
     refreshTotals();
   };
-
-  host.querySelector("#coupon-btn").addEventListener("click", async () => {
+  const applyCoupon = async () => {
     const code = host.querySelector("#coupon").value.trim();
-    if (!code) return toast("Enter a promo code", "error");
-    const msg = host.querySelector("#coupon-msg");
+    if (!code) { setMsg("Enter a promo code", "err"); return; }
     const btn = host.querySelector("#coupon-btn");
     btn.disabled = true;
     btn.textContent = "…";
@@ -134,17 +149,29 @@ export async function renderCheckout(root) {
       const res = await api.post("/api/coupons/check", { code });
       couponCode = res.code;
       couponDiscount = res.discount_amount;
-      msg.innerHTML = `<span style="color:var(--green)">${esc(res.message)}</span>`;
-      applyCouponUI();
+      setMsg(esc(res.message), "ok");
+      refreshCouponUI();
     } catch (err) {
       couponCode = "";
       couponDiscount = 0;
-      applyCouponUI();
-      msg.textContent = err.message;
+      refreshCouponUI();
+      setMsg(esc(err.message), "err");
     } finally {
       btn.disabled = false;
       btn.textContent = "Apply";
     }
+  };
+  host.querySelector("#coupon-btn").addEventListener("click", applyCoupon);
+  host.querySelector("#coupon").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); applyCoupon(); }
+  });
+  host.querySelector("#coupon-remove").addEventListener("click", () => {
+    couponCode = "";
+    couponDiscount = 0;
+    host.querySelector("#coupon").value = "";
+    setMsg("", "");
+    refreshCouponUI();
+    toast("Coupon removed", "info", 1500);
   });
 
   host.querySelectorAll(".pay-option").forEach((opt) => {
