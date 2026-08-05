@@ -11,7 +11,9 @@ export async function renderCart(root) {
     const empty = emptyState("&#128722;", "Your cart is empty", "Browse the shop and add items.");
     empty.appendChild(el(`<div class="center" style="padding-top:8px"><button class="btn btn-primary" style="width:auto;padding:12px 28px">Start shopping</button></div>`));
     empty.querySelector("button").addEventListener("click", () => navigate(""));
-    root.appendChild(el(`<div class="container">${empty.outerHTML}</div>`));
+    const wrap = el(`<div class="container"></div>`);
+    wrap.appendChild(empty);
+    root.appendChild(wrap);
     return;
   }
 

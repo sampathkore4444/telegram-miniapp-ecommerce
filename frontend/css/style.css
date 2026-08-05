@@ -1,25 +1,25 @@
 :root {
-  --bg: #ffffff;
-  --bg-soft: #f4f5f7;
+  --bg: #f2f4fb;
+  --bg-soft: #e8ecf8;
   --card: #ffffff;
-  --border: #e3e6ea;
-  --text: #111417;
-  --text-2: #6b7280;
-  --text-3: #9ca3af;
-  --accent: #2f6bff;
-  --accent-2: #5b8cff;
-  --accent-soft: rgba(47, 107, 255, 0.1);
-  --green: #22c55e;
-  --green-bg: #e7f8ee;
+  --border: #e2e6f2;
+  --text: #181c28;
+  --text-2: #5c6679;
+  --text-3: #97a0b3;
+  --accent: #3b5bfd;
+  --accent-2: #7c5bff;
+  --accent-soft: rgba(74, 98, 253, 0.12);
+  --green: #16a34a;
+  --green-bg: #e6f7ec;
   --amber: #f59e0b;
   --amber-bg: #fef3e2;
   --red: #ef4444;
   --red-bg: #fdecec;
-  --gray-bg: #f0f1f3;
-  --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.06);
-  --shadow-md: 0 4px 14px rgba(16, 24, 40, 0.08), 0 1px 3px rgba(16, 24, 40, 0.05);
-  --shadow-lg: 0 12px 40px rgba(16, 24, 40, 0.14);
+  --gray-bg: #eef1f8;
+  --grad: linear-gradient(135deg, #4f6bff 0%, #7c5bff 100%);
+  --shadow-sm: 0 1px 2px rgba(30, 40, 90, 0.06), 0 1px 3px rgba(30, 40, 90, 0.06);
+  --shadow-md: 0 4px 14px rgba(30, 40, 90, 0.08), 0 1px 3px rgba(30, 40, 90, 0.05);
+  --shadow-lg: 0 12px 40px rgba(30, 40, 90, 0.14);
   --radius: 16px;
   --radius-sm: 10px;
   --radius-lg: 20px;
@@ -62,7 +62,25 @@ html, body {
   overscroll-behavior-y: none;
 }
 
-body { display: flex; flex-direction: column; }
+body {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(900px 480px at 8% -5%, rgba(64, 110, 255, 0.13), transparent 55%),
+    radial-gradient(820px 440px at 105% 6%, rgba(156, 88, 255, 0.11), transparent 55%),
+    radial-gradient(760px 420px at 92% 102%, rgba(52, 199, 123, 0.10), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+html[data-scheme="dark"] body {
+  background:
+    radial-gradient(900px 480px at 8% -5%, rgba(82, 136, 255, 0.15), transparent 55%),
+    radial-gradient(820px 440px at 105% 6%, rgba(156, 88, 255, 0.10), transparent 55%),
+    radial-gradient(760px 420px at 92% 102%, rgba(62, 207, 106, 0.07), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+}
 
 button { font-family: inherit; }
 
@@ -198,9 +216,9 @@ h2.sub { font-size: 16px; font-weight: 700; margin: 18px 0 10px; }
 .btn-primary {
   background: var(--grad);
   color: #fff;
-  box-shadow: 0 6px 16px rgba(47, 107, 255, 0.28);
+  box-shadow: 0 6px 16px rgba(79, 92, 255, 0.28);
 }
-.btn-primary:active { box-shadow: 0 2px 8px rgba(47, 107, 255, 0.2); }
+.btn-primary:active { box-shadow: 0 2px 8px rgba(79, 92, 255, 0.2); }
 .btn-success { background: var(--green); color: #fff; box-shadow: 0 6px 16px rgba(34, 197, 94, 0.26); }
 .btn-danger { background: var(--red); color: #fff; box-shadow: 0 6px 16px rgba(239, 68, 68, 0.24); }
 .btn-outline { background: transparent; border: 1px solid var(--border); box-shadow: none; }
@@ -292,7 +310,7 @@ textarea.input { min-height: 84px; resize: vertical; }
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
+  box-shadow: 0 4px 10px rgba(79, 92, 255, 0.35);
   transition: transform 0.12s ease;
 }
 .quick-add:active { transform: scale(0.88); }
@@ -327,12 +345,12 @@ textarea.input { min-height: 84px; resize: vertical; }
 .hero {
   position: relative;
   border-radius: var(--radius-lg);
-  padding: 22px 18px;
+  padding: 22px 18px 18px;
   margin-bottom: 14px;
   color: #fff;
   background: var(--grad);
   overflow: hidden;
-  box-shadow: 0 10px 28px rgba(47, 107, 255, 0.28);
+  box-shadow: 0 10px 28px rgba(79, 92, 255, 0.28);
 }
 .hero::after {
   content: "";
@@ -351,13 +369,13 @@ textarea.input { min-height: 84px; resize: vertical; }
   background: rgba(255, 255, 255, 0.08);
 }
 .hero-logo {
-  width: 44px; height: 44px;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
+  display: block;
+  width: 72px;
+  height: auto;
+  border-radius: 10px;
+  background: #fff;
+  padding: 5px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
   margin-bottom: 12px;
 }
 .hero h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; position: relative; z-index: 1; }
@@ -569,7 +587,7 @@ html[data-scheme="dark"] .badge-confirmed, html[data-scheme="dark"] .badge-proce
   font-weight: 700;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 6px 16px rgba(47, 107, 255, 0.3);
+  box-shadow: 0 6px 16px rgba(79, 92, 255, 0.3);
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -607,7 +625,7 @@ html[data-scheme="dark"] .badge-confirmed, html[data-scheme="dark"] .badge-proce
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.3);
+  box-shadow: 0 4px 10px rgba(79, 92, 255, 0.3);
 }
 
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -644,7 +662,7 @@ html[data-scheme="dark"] .badge-confirmed, html[data-scheme="dark"] .badge-proce
   border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 14px;
-  box-shadow: 0 8px 20px rgba(47, 107, 255, 0.24);
+  box-shadow: 0 8px 20px rgba(79, 92, 255, 0.24);
 }
 .banner h2 { font-size: 20px; margin-bottom: 4px; }
 .banner p { opacity: 0.9; font-size: 14px; }
@@ -734,7 +752,7 @@ button.x:hover { background: var(--red); border-color: var(--red); color: #fff; 
   font-weight: 600;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-.pill.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 4px 10px rgba(47, 107, 255, 0.3); }
+.pill.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 4px 10px rgba(79, 92, 255, 0.3); }
 
 .step-note {
   background: var(--amber-bg);
@@ -849,7 +867,7 @@ footer.page-footer { text-align: center; font-size: 12px; color: var(--text-3); 
   background: var(--grad);
   margin-bottom: 14px;
   overflow: hidden;
-  box-shadow: 0 10px 28px rgba(47, 107, 255, 0.28);
+  box-shadow: 0 10px 28px rgba(79, 92, 255, 0.28);
 }
 .profile-hero::after {
   content: "";
@@ -875,7 +893,7 @@ footer.page-footer { text-align: center; font-size: 12px; color: var(--text-3); 
   align-items: center;
   justify-content: center;
   font-size: 44px;
-  box-shadow: 0 14px 34px rgba(47, 107, 255, 0.35);
+  box-shadow: 0 14px 34px rgba(79, 92, 255, 0.35);
 }
 .login-hero h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
 .login-hero p { font-size: 14px; margin-top: 6px; }

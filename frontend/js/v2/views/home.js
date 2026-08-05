@@ -12,7 +12,7 @@ export async function renderHome(root) {
   const host = el(`
     <div class="container">
       <header class="hero">
-        <div class="hero-logo">&#128722;</div>
+        <img class="hero-logo" src="/img/shoptrolley.png" alt="${esc(store.store_name)}" />
         <h1>${esc(store.store_name)}</h1>
         <p>${esc(tagline)}</p>
       </header>
