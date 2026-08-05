@@ -115,11 +115,11 @@ def create_app() -> FastAPI:
     uploads_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
-    # SPA static frontend
+    # SPA static frontend (no-store so Telegram's WebView never serves stale assets)
     class SPAStaticFiles(StaticFiles):
         def file_response(self, *args, **kwargs):
             response = super().file_response(*args, **kwargs)
-            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            response.headers["Cache-Control"] = "no-store"
             return response
 
     frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
