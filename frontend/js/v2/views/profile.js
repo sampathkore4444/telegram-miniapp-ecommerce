@@ -2,51 +2,7 @@ import { api } from "../api.js";
 import { navigate } from "../router.js";
 import { el, esc, getStore, toast, confirmBox } from "../ui.js";
 import { logout } from "../auth.js";
-
-function attachGeoButton(btn, status, inputEl) {
-  const setStatus = (html, kind) => {
-    status.className = `small geo-status${kind ? ` ${kind}` : ""}`;
-    status.innerHTML = html || "";
-    status.hidden = !html;
-  };
-  btn.addEventListener("click", () => {
-    if (!("geolocation" in navigator)) {
-      return toast("Geolocation is not supported on this device", "error");
-    }
-    btn.disabled = true;
-    const origLabel = btn.innerHTML;
-    btn.innerHTML = "Locating…";
-    setStatus("Getting your location…", "info");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setStatus("Resolving your address…", "info");
-        try {
-          const data = await api.get(`/api/geocode/reverse?lat=${latitude}&lon=${longitude}`);
-          inputEl.value = data.address;
-          inputEl.focus();
-          setStatus("Location captured — you can edit it before saving.", "ok");
-        } catch (err) {
-          setStatus("Could not resolve the address. You can type it manually.", "err");
-        } finally {
-          btn.disabled = false;
-          btn.innerHTML = origLabel;
-        }
-      },
-      (err) => {
-        setStatus(
-          err.code === err.PERMISSION_DENIED
-            ? "Location permission denied. Enable location access and try again."
-            : "Could not get your location. Please try again.",
-          "err"
-        );
-        btn.disabled = false;
-        btn.innerHTML = origLabel;
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-    );
-  });
-}
+import { attachGeoButton } from "../geo.js";
 
 export async function renderProfile(root) {
   root.innerHTML = "";
