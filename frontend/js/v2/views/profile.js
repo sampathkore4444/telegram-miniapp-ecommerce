@@ -21,7 +21,14 @@ export async function renderProfile(root) {
       <div class="card section-title">Contact & delivery details</div>
       <div class="card">
         <div class="field"><label>Phone</label><input class="input" id="phone" value="${esc(me.phone || "")}" placeholder="+855 …" /></div>
-        <div class="field"><label>Default address</label><textarea class="input" id="address" placeholder="Your default delivery address">${esc(me.address || "")}</textarea></div>
+        <div class="field">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="margin:0">Default address</label>
+            <button class="btn btn-sm btn-outline" id="geo-btn" type="button">&#128205; Use my location</button>
+          </div>
+          <textarea class="input" id="address" placeholder="Your default delivery address">${esc(me.address || "")}</textarea>
+          <p class="small geo-status" id="geo-status" hidden></p>
+        </div>
         <button class="btn btn-primary" id="save">Save details</button>
       </div>
 
@@ -66,6 +73,53 @@ export async function renderProfile(root) {
     } catch (err) {
       toast(err.message, "error");
     }
+  });
+
+  const geoBtn = host.querySelector("#geo-btn");
+  const geoStatus = host.querySelector("#geo-status");
+  const setGeoStatus = (html, kind) => {
+    geoStatus.className = `small geo-status${kind ? ` ${kind}` : ""}`;
+    geoStatus.innerHTML = html || "";
+    geoStatus.hidden = !html;
+  };
+
+  geoBtn.addEventListener("click", () => {
+    if (!("geolocation" in navigator)) {
+      return toast("Geolocation is not supported on this device", "error");
+    }
+    geoBtn.disabled = true;
+    const origLabel = geoBtn.innerHTML;
+    geoBtn.innerHTML = "Locating…";
+    setGeoStatus("Getting your location…", "info");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setGeoStatus("Resolving your address…", "info");
+        try {
+          const data = await api.get(`/api/geocode/reverse?lat=${latitude}&lon=${longitude}`);
+          const ta = host.querySelector("#address");
+          ta.value = data.address;
+          ta.focus();
+          setGeoStatus("Location captured — you can edit it before saving.", "ok");
+        } catch (err) {
+          setGeoStatus("Could not resolve the address. You can type it manually.", "err");
+        } finally {
+          geoBtn.disabled = false;
+          geoBtn.innerHTML = origLabel;
+        }
+      },
+      (err) => {
+        setGeoStatus(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied. Enable location access and try again."
+            : "Could not get your location. Please try again.",
+          "err"
+        );
+        geoBtn.disabled = false;
+        geoBtn.innerHTML = origLabel;
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
   });
 
   const addrList = host.querySelector("#addr-list");

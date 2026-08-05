@@ -22,6 +22,7 @@ from app.api import (
     cart,
     categories,
     coupons,
+    geocode,
     health,
     orders,
     products,
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
+    app.include_router(geocode.router, prefix="/api")
     app.include_router(users.router, prefix="/api")
     app.include_router(addresses.router, prefix="/api")
     app.include_router(categories.router, prefix="/api")
