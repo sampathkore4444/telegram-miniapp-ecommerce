@@ -3,6 +3,51 @@ import { navigate } from "../router.js";
 import { el, esc, getStore, toast, confirmBox } from "../ui.js";
 import { logout } from "../auth.js";
 
+function attachGeoButton(btn, status, inputEl) {
+  const setStatus = (html, kind) => {
+    status.className = `small geo-status${kind ? ` ${kind}` : ""}`;
+    status.innerHTML = html || "";
+    status.hidden = !html;
+  };
+  btn.addEventListener("click", () => {
+    if (!("geolocation" in navigator)) {
+      return toast("Geolocation is not supported on this device", "error");
+    }
+    btn.disabled = true;
+    const origLabel = btn.innerHTML;
+    btn.innerHTML = "Locating…";
+    setStatus("Getting your location…", "info");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setStatus("Resolving your address…", "info");
+        try {
+          const data = await api.get(`/api/geocode/reverse?lat=${latitude}&lon=${longitude}`);
+          inputEl.value = data.address;
+          inputEl.focus();
+          setStatus("Location captured — you can edit it before saving.", "ok");
+        } catch (err) {
+          setStatus("Could not resolve the address. You can type it manually.", "err");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = origLabel;
+        }
+      },
+      (err) => {
+        setStatus(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied. Enable location access and try again."
+            : "Could not get your location. Please try again.",
+          "err"
+        );
+        btn.disabled = false;
+        btn.innerHTML = origLabel;
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  });
+}
+
 export async function renderProfile(root) {
   root.innerHTML = "";
   const store = await getStore();
@@ -75,52 +120,11 @@ export async function renderProfile(root) {
     }
   });
 
-  const geoBtn = host.querySelector("#geo-btn");
-  const geoStatus = host.querySelector("#geo-status");
-  const setGeoStatus = (html, kind) => {
-    geoStatus.className = `small geo-status${kind ? ` ${kind}` : ""}`;
-    geoStatus.innerHTML = html || "";
-    geoStatus.hidden = !html;
-  };
-
-  geoBtn.addEventListener("click", () => {
-    if (!("geolocation" in navigator)) {
-      return toast("Geolocation is not supported on this device", "error");
-    }
-    geoBtn.disabled = true;
-    const origLabel = geoBtn.innerHTML;
-    geoBtn.innerHTML = "Locating…";
-    setGeoStatus("Getting your location…", "info");
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setGeoStatus("Resolving your address…", "info");
-        try {
-          const data = await api.get(`/api/geocode/reverse?lat=${latitude}&lon=${longitude}`);
-          const ta = host.querySelector("#address");
-          ta.value = data.address;
-          ta.focus();
-          setGeoStatus("Location captured — you can edit it before saving.", "ok");
-        } catch (err) {
-          setGeoStatus("Could not resolve the address. You can type it manually.", "err");
-        } finally {
-          geoBtn.disabled = false;
-          geoBtn.innerHTML = origLabel;
-        }
-      },
-      (err) => {
-        setGeoStatus(
-          err.code === err.PERMISSION_DENIED
-            ? "Location permission denied. Enable location access and try again."
-            : "Could not get your location. Please try again.",
-          "err"
-        );
-        geoBtn.disabled = false;
-        geoBtn.innerHTML = origLabel;
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-    );
-  });
+  attachGeoButton(
+    host.querySelector("#geo-btn"),
+    host.querySelector("#geo-status"),
+    host.querySelector("#address")
+  );
 
   const addrList = host.querySelector("#addr-list");
 
@@ -186,7 +190,14 @@ export async function renderProfile(root) {
         <div class="field"><label>Label (e.g. Home)</label><input class="input" id="alabel" value="${esc(addr?.label || "")}" placeholder="Home" /></div>
         <div class="field"><label>Recipient name *</label><input class="input" id="aname" value="${esc(addr?.recipient_name || "")}" /></div>
         <div class="field"><label>Phone *</label><input class="input" id="aphone" value="${esc(addr?.recipient_phone || "")}" /></div>
-        <div class="field"><label>Address *</label><textarea class="input" id="aaddr">${esc(addr?.address || "")}</textarea></div>
+        <div class="field">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label style="margin:0">Address *</label>
+            <button class="btn btn-sm btn-outline" id="ageo-btn" type="button">&#128205; Use my location</button>
+          </div>
+          <textarea class="input" id="aaddr">${esc(addr?.address || "")}</textarea>
+          <p class="small geo-status" id="ageo-status" hidden></p>
+        </div>
         <label class="row" style="cursor:pointer;justify-content:flex-start;gap:10px;margin-bottom:12px">
           <input type="checkbox" id="adef" ${addr?.is_default ? "checked" : ""} />
           <span>Use as default address</span>
@@ -222,6 +233,11 @@ export async function renderProfile(root) {
         btn.textContent = "Save";
       }
     });
+    attachGeoButton(
+      form.querySelector("#ageo-btn"),
+      form.querySelector("#ageo-status"),
+      form.querySelector("#aaddr")
+    );
     addrList.appendChild(form);
   };
 
