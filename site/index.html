@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopTrolley — Telegram Mini-App E-commerce</title>
+  <meta name="description" content="ShopTrolley turns Telegram into your online store. A complete e-commerce Mini App for Indonesia, Vietnam and Brazil — catalog, cart, QR & COD payments, orders and admin dashboard." />
+  <link rel="icon" type="image/png" href="img/shoptrolley.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav" id="nav">
+    <div class="nav-inner container">
+      <a class="brand" href="#top">
+        <img class="brand-logo" src="img/shoptrolley.png" alt="ShopTrolley" />
+        <span class="brand-name">ShopTrolley</span>
+      </a>
+
+      <nav class="nav-links" id="nav-links" aria-label="Primary">
+        <a href="#features" data-i18n="nav_features">Features</a>
+        <a href="#how" data-i18n="nav_how">How it works</a>
+        <a href="#markets" data-i18n="nav_markets">Markets</a>
+        <a href="#pricing" data-i18n="nav_pricing">Pricing</a>
+        <a href="#faq" data-i18n="nav_faq">FAQ</a>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="lang-switch">
+          <button class="lang-btn" id="lang-btn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="lang-flag" id="lang-flag">🌐</span>
+            <span id="lang-label">English</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <ul class="lang-menu" id="lang-menu" role="listbox">
+            <li role="option" data-lang="en"><span class="flag">🇺🇸</span> English</li>
+            <li role="option" data-lang="id"><span class="flag">🇮🇩</span> Bahasa Indonesia</li>
+            <li role="option" data-lang="vi"><span class="flag">🇻🇳</span> Tiếng Việt</li>
+            <li role="option" data-lang="pt"><span class="flag">🇧🇷</span> Português</li>
+          </ul>
+        </div>
+        <a class="btn btn-primary btn-sm nav-cta" href="#signup" data-i18n="nav_cta">Start free</a>
+        <button class="nav-burger" id="nav-burger" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="hero-bg">
+        <span class="blob b1"></span>
+        <span class="blob b2"></span>
+        <span class="blob b3"></span>
+      </div>
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="pill hero-pill" data-i18n="hero_pill">🇮🇩 · 🇻🇳 · 🇧🇷 · 🇺🇸</span>
+          <h1 data-i18n="hero_title">Turn Telegram into your online store</h1>
+          <p class="hero-sub" data-i18n="hero_sub">ShopTrolley is a complete e-commerce Mini App that runs inside Telegram — catalog, cart, checkout, local payments and admin dashboard. Live in minutes, built for Indonesia, Vietnam and Brazil.</p>
+          <div class="hero-ctas">
+            <a class="btn btn-primary btn-lg" href="#signup" data-i18n="hero_cta1">Start your store</a>
+            <a class="btn btn-ghost btn-lg" href="#how" data-i18n="hero_cta2">See how it works</a>
+          </div>
+          <p class="hero-note" data-i18n="hero_note">No credit card required · Setup in under 15 minutes</p>
+        </div>
+
+        <div class="hero-visual">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="app-bar"><div class="app-avatar">🛒</div><div><div class="app-name">My Shop</div><div class="app-tag">Telegram Mini App</div></div></div>
+              <div class="app-banner">
+                <img class="app-logo" src="img/shoptrolley.png" alt="" />
+                <div class="app-banner-txt">
+                  <div class="app-h1">My Shop</div>
+                  <div class="app-p" data-i18n="app_p">Fresh goods, delivered fast 🚀</div>
+                </div>
+              </div>
+              <div class="app-search"><span>🔍</span><span data-i18n="app_search">Search products…</span></div>
+              <div class="app-products">
+                <div class="app-card">
+                  <div class="app-thumb">🛍️</div>
+                  <div class="app-pname">Premium Tote Bag</div>
+                  <div class="app-price">$24.99</div>
+                </div>
+                <div class="app-card">
+                  <div class="app-thumb">👟</div>
+                  <div class="app-pname">Running Shoes</div>
+                  <div class="app-price">$49.90</div>
+                </div>
+                <div class="app-card">
+                  <div class="app-thumb">🍵</div>
+                  <div class="app-pname">Green Tea Box</div>
+                  <div class="app-price">$9.50</div>
+                </div>
+                <div class="app-card">
+                  <div class="app-thumb">🎧</div>
+                  <div class="app-pname">Wireless Buds</div>
+                  <div class="app-price">$39.00</div>
+                </div>
+              </div>
+              <div class="app-cart">
+                <div class="app-cart-t" data-i18n="app_cart_t">Cart</div>
+                <div class="app-cart-row"><span class="app-cart-n" data-i18n="app_cart_n">2 items</span><span class="app-cart-total">$74.89</span></div>
+                <div class="app-checkout" data-i18n="app_checkout">Checkout</div>
+              </div>
+            </div>
+          </div>
+          <div class="float-chip chip-1"><span class="chip-ico">✅</span> <span data-i18n="chip1">Order confirmed</span></div>
+          <div class="float-chip chip-2"><span class="chip-ico">💸</span> <span data-i18n="chip2">COD & QR payments</span></div>
+        </div>
+      </div>
+
+      <div class="container stats">
+        <div class="stat"><div class="stat-n" data-i18n="stat1n">15+</div><div class="stat-l" data-i18n="stat1l">Stores launched</div></div>
+        <div class="stat"><div class="stat-n" data-i18n="stat2n">10k+</div><div class="stat-l" data-i18n="stat2l">Checkouts processed</div></div>
+        <div class="stat"><div class="stat-n" data-i18n="stat3n">3</div><div class="stat-l" data-i18n="stat3l">Markets served</div></div>
+        <div class="stat"><div class="stat-n" data-i18n="stat4n">99.9%</div><div class="stat-l" data-i18n="stat4l">Uptime</div></div>
+      </div>
+    </section>
+
+    <!-- ============ FEATURES ============ -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="sec-head">
+          <span class="sec-eyebrow" data-i18n="features_eyebrow">Why ShopTrolley</span>
+          <h2 class="sec-title" data-i18n="features_title">Everything you need to sell — inside Telegram</h2>
+          <p class="sec-sub" data-i18n="features_sub">No website. No app downloads. Your storefront lives where your customers already chat and buy.</p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feat">
+            <div class="feat-ico" style="--c:#4f6bff">💬</div>
+            <h3 data-i18n="f1_title">Telegram-native storefront</h3>
+            <p data-i18n="f1_desc">Your entire shop runs as a Mini App inside Telegram. Zero downloads, zero redirects — buyers shop in one tap.</p>
+          </div>
+          <div class="feat">
+            <div class="feat-ico" style="--c:#16a34a">💸</div>
+            <h3 data-i18n="f2_title">Local payments</h3>
+            <p data-i18n="f2_desc">Bank QR payments and Cash on Delivery — the payment methods your customers in Indonesia, Vietnam and Brazil actually trust.</p>
+          </div>
+          <div class="feat">
+            <div class="feat-ico" style="--c:#7c5bff">📊</div>
+            <h3 data-i18n="f3_title">Admin dashboard</h3>
+            <p data-i18n="f3_desc">Track revenue, sales and orders in real time from a single-owner dashboard built for one-person shops.</p>
+          </div>
+          <div class="feat">
+            <div class="feat-ico" style="--c:#f59e0b">📦</div>
+            <h3 data-i18n="f4_title">Catalog & inventory</h3>
+            <p data-i18n="f4_desc">Products, variants, categories, coupons and stock control — manage everything without touching code.</p>
+          </div>
+          <div class="feat">
+            <div class="feat-ico" style="--c:#ef4444">🧾</div>
+            <h3 data-i18n="f5_title">Order management</h3>
+            <p data-i18n="f5_desc">Full order lifecycle from checkout to delivery, with payment-proof review and automatic stock restoration.</p>
+          </div>
+          <div class="feat">
+            <div class="feat-ico" style="--c:#0ea5e9">⚡</div>
+            <h3 data-i18n="f6_title">Mobile-first & fast</h3>
+            <p data-i18n="f6_desc">Lightweight and built for low-end phones and slower connections — the reality of emerging markets.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="section alt" id="how">
+      <div class="container">
+        <div class="sec-head">
+          <span class="sec-eyebrow" data-i18n="how_eyebrow">How it works</span>
+          <h2 class="sec-title" data-i18n="how_title">Live in three steps</h2>
+          <p class="sec-sub" data-i18n="how_sub">From zero to your first sale in under 15 minutes.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-n">1</div>
+            <h3 data-i18n="h1_title">Create your store</h3>
+            <p data-i18n="h1_desc">Sign up, choose your name, currency and payment methods.</p>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step">
+            <div class="step-n">2</div>
+            <h3 data-i18n="h2_title">Add your products</h3>
+            <p data-i18n="h2_desc">Upload photos, prices and stock — or import an existing catalog.</p>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step">
+            <div class="step-n">3</div>
+            <h3 data-i18n="h3_title">Go live in Telegram</h3>
+            <p data-i18n="h3_desc">Share the link. Customers open your store right inside Telegram.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MARKETS ============ -->
+    <section class="section" id="markets">
+      <div class="container">
+        <div class="sec-head">
+          <span class="sec-eyebrow" data-i18n="markets_eyebrow">Localized by design</span>
+          <h2 class="sec-title" data-i18n="markets_title">Speaks your market's language</h2>
+          <p class="sec-sub" data-i18n="markets_sub">ShopTrolley localizes the whole experience — language, currency and payments — for the markets you serve.</p>
+        </div>
+        <div class="markets">
+          <div class="market" style="--accent:#e21b1b;--accent-soft:rgba(226,27,27,0.12)">
+            <div class="market-flag">🇮🇩</div>
+            <h3 data-i18n="id_title">Indonesia</h3>
+            <p data-i18n="id_desc">Cash on Delivery and QR payments fit how Indonesians shop, with full Bahasa Indonesia support.</p>
+            <div class="market-tags"><span>IDR</span><span>COD</span><span>QRIS</span><span>Bahasa</span></div>
+          </div>
+          <div class="market" style="--accent:#da251d;--accent-soft:rgba(218,37,29,0.12)">
+            <div class="market-flag">🇻🇳</div>
+            <h3 data-i18n="vn_title">Vietnam</h3>
+            <p data-i18n="vn_desc">Bank transfer and COD options tuned for Vietnamese buyers, with full tiếng Việt support.</p>
+            <div class="market-tags"><span>VND</span><span>COD</span><span>Bank</span><span>Tiếng Việt</span></div>
+          </div>
+          <div class="market" style="--accent:#009c3b;--accent-soft:rgba(0,156,59,0.12)">
+            <div class="market-flag">🇧🇷</div>
+            <h3 data-i18n="br_title">Brazil</h3>
+            <p data-i18n="br_desc">Pix-style QR checkout and COD built for Brazilian buyers, with full Português support.</p>
+            <div class="market-tags"><span>BRL</span><span>Pix</span><span>COD</span><span>Português</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRICING ============ -->
+    <section class="section alt" id="pricing">
+      <div class="container">
+        <div class="sec-head">
+          <span class="sec-eyebrow" data-i18n="pricing_eyebrow">Pricing</span>
+          <h2 class="sec-title" data-i18n="pricing_title">Simple, honest pricing</h2>
+          <p class="sec-sub" data-i18n="pricing_sub">Start free and pay only when you grow. Cancel anytime.</p>
+        </div>
+        <div class="plans">
+          <div class="plan">
+            <div class="plan-name" data-i18n="p_starter">Starter</div>
+            <div class="plan-price"><span class="cur">$</span>0<span class="per" data-i18n="p_per">/month</span></div>
+            <p class="plan-desc" data-i18n="p_starter_d">For trying things out</p>
+            <ul class="plan-feats">
+              <li data-i18n="p_starter_1">Up to 50 products</li>
+              <li data-i18n="p_starter_2">COD + QR payments</li>
+              <li data-i18n="p_starter_3">Admin dashboard</li>
+            </ul>
+            <a class="btn btn-outline" href="#signup" data-i18n="p_starter_cta">Start free</a>
+          </div>
+          <div class="plan popular">
+            <span class="plan-badge" data-i18n="p_pop">Most popular</span>
+            <div class="plan-name" data-i18n="p_growth">Growth</div>
+            <div class="plan-price"><span class="cur">$</span>19<span class="per" data-i18n="p_per">/month</span></div>
+            <p class="plan-desc" data-i18n="p_growth_d">For growing shops</p>
+            <ul class="plan-feats">
+              <li data-i18n="p_growth_1">Up to 500 products</li>
+              <li data-i18n="p_growth_2">Coupons & promotions</li>
+              <li data-i18n="p_growth_3">Advanced analytics</li>
+            </ul>
+            <a class="btn btn-primary" href="#signup" data-i18n="p_growth_cta">Choose Growth</a>
+          </div>
+          <div class="plan">
+            <div class="plan-name" data-i18n="p_pro">Pro</div>
+            <div class="plan-price"><span class="cur">$</span>49<span class="per" data-i18n="p_per">/month</span></div>
+            <p class="plan-desc" data-i18n="p_pro_d">For serious sellers</p>
+            <ul class="plan-feats">
+              <li data-i18n="p_pro_1">Unlimited products</li>
+              <li data-i18n="p_pro_2">Multi-store management</li>
+              <li data-i18n="p_pro_3">Priority support</li>
+            </ul>
+            <a class="btn btn-outline" href="#signup" data-i18n="p_pro_cta">Go Pro</a>
+          </div>
+        </div>
+        <p class="pricing-note" data-i18n="pricing_note">Prices in USD. Local pricing available in IDR, VND and BRL.</p>
+      </div>
+    </section>
+
+    <!-- ============ TESTIMONIALS ============ -->
+    <section class="section" id="testimonials">
+      <div class="container">
+        <div class="sec-head">
+          <span class="sec-eyebrow" data-i18n="testi_eyebrow">Testimonials</span>
+          <h2 class="sec-title" data-i18n="testi_title">Loved by shop owners</h2>
+        </div>
+        <div class="quotes">
+          <div class="quote">
+            <div class="quote-stars">★★★★★</div>
+            <p class="quote-txt" data-i18n="t1_q">"I went from zero to my first sale in one afternoon. Customers love that they never leave Telegram."</p>
+            <div class="quote-who">
+              <div class="quote-av" style="background:#4f6bff">R</div>
+              <div><div class="quote-name" data-i18n="t1_n">Rina</div><div class="quote-role" data-i18n="t1_r">Fashion boutique · Jakarta, ID</div></div>
+            </div>
+          </div>
+          <div class="quote">
+            <div class="quote-stars">★★★★★</div>
+            <p class="quote-txt" data-i18n="t2_q">"COD and bank transfer made my customers feel safe. Orders flow straight from Telegram to my phone."</p>
+            <div class="quote-who">
+              <div class="quote-av" style="background:#16a34a">M</div>
+              <div><div class="quote-name" data-i18n="t2_n">Minh</div><div class="quote-role" data-i18n="t2_r">Street food supplier · HCMC, VN</div></div>
+            </div>
+          </div>
+          <div class="quote">
+            <div class="quote-stars">★★★★★</div>
+            <p class="quote-txt" data-i18n="t3_q">"My clients love the Pix QR checkout. It was up in one evening, no website or app needed."</p>
+            <div class="quote-who">
+              <div class="quote-av" style="background:#009c3b">L</div>
+              <div><div class="quote-name" data-i18n="t3_n">Larissa</div><div class="quote-role" data-i18n="t3_r">Handmade cosmetics · São Paulo, BR</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section class="section alt" id="faq">
+      <div class="container faq-col">
+        <div class="sec-head">
+          <span class="sec-eyebrow" data-i18n="faq_eyebrow">FAQ</span>
+          <h2 class="sec-title" data-i18n="faq_title">Frequently asked questions</h2>
+        </div>
+        <div class="faq-list">
+          <div class="faq-item">
+            <button class="faq-q" data-i18n="q1">Do my customers need to install anything?</button>
+            <div class="faq-a"><p data-i18n="a1">No. ShopTrolley is a Telegram Mini App — customers open your store directly inside their Telegram app. No downloads, no accounts, no redirects.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q" data-i18n="q2">Which payment methods are supported?</button>
+            <div class="faq-a"><p data-i18n="a2">Bank QR payments (including QRIS-style flows) and Cash on Delivery. Each market gets the payment options its customers trust most.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q" data-i18n="q3">How fast can I launch?</button>
+            <div class="faq-a"><p data-i18n="a3">Most stores go live in under 15 minutes. Add products, set your payment methods, share the link — done.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q" data-i18n="q4">Do I need a website or a server?</button>
+            <div class="faq-a"><p data-i18n="a4">No. ShopTrolley hosts everything. Your store runs as a Mini App inside Telegram, and your admin dashboard lives in the same app.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q" data-i18n="q5">Can I manage inventory and coupons?</button>
+            <div class="faq-a"><p data-i18n="a5">Yes. Products, variants, categories, stock levels and discount coupons are all managed from the admin dashboard — no code required.</p></div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q" data-i18n="q6">What about order tracking and delivery?</button>
+            <div class="faq-a"><p data-i18n="a6">You control the full order flow: confirm, process, ship, deliver. Buyers can track status and upload payment proof right in the chat.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="section" id="cta">
+      <div class="container">
+        <div class="cta-box">
+          <div class="cta-bg"><span class="blob b1"></span><span class="blob b2"></span></div>
+          <h2 data-i18n="cta_title">Ready to start selling?</h2>
+          <p data-i18n="cta_sub">Launch your Telegram store today — no credit card needed.</p>
+          <a class="btn btn-white btn-lg" href="#signup" data-i18n="cta_btn">Start your store</a>
+          <p class="cta-note" data-i18n="cta_note">Set up in 15 minutes · Cancel anytime</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SIGNUP ============ -->
+    <section class="section alt" id="signup">
+      <div class="container">
+        <div class="sec-head">
+          <span class="sec-eyebrow" data-i18n="signup_eyebrow">Get started</span>
+          <h2 class="sec-title" data-i18n="signup_title">Create your ShopTrolley store</h2>
+          <p class="sec-sub" data-i18n="signup_sub">Tell us a little about your shop and we'll get you live in minutes.</p>
+        </div>
+
+        <form class="signup-form" id="signup-form" novalidate>
+          <div class="signup-grid">
+            <div class="field">
+              <label for="s-store" data-i18n="s_store">Store name</label>
+              <input class="input" id="s-store" name="store_name" type="text" required autocomplete="organization" data-i18n-ph="s_store_ph" placeholder="e.g. Rina's Boutique" />
+            </div>
+            <div class="field">
+              <label for="s-name" data-i18n="s_name">Your name</label>
+              <input class="input" id="s-name" name="name" type="text" required autocomplete="name" data-i18n-ph="s_name_ph" placeholder="e.g. Rina" />
+            </div>
+            <div class="field">
+              <label for="s-email" data-i18n="s_email">Email</label>
+              <input class="input" id="s-email" name="email" type="email" required autocomplete="email" data-i18n-ph="s_email_ph" placeholder="you@example.com" />
+            </div>
+            <div class="field">
+              <label for="s-market" data-i18n="s_market">Primary market</label>
+              <select class="input select" id="s-market" name="market" required>
+                <option value="Indonesia" data-i18n="m_id">Indonesia</option>
+                <option value="Vietnam" data-i18n="m_vn">Vietnam</option>
+                <option value="Brazil" data-i18n="m_br">Brazil</option>
+                <option value="Other" data-i18n="m_other">Other</option>
+              </select>
+            </div>
+            <div class="field signup-field-wide">
+              <label for="s-telegram" data-i18n="s_telegram">Telegram handle (optional)</label>
+              <input class="input" id="s-telegram" name="telegram" type="text" autocomplete="off" data-i18n-ph="s_telegram_ph" placeholder="@yourhandle" />
+            </div>
+          </div>
+
+          <div class="field-error hidden" id="form-error" role="alert"></div>
+
+          <button class="btn btn-primary btn-lg signup-btn" type="submit" id="signup-submit" data-i18n="signup_btn">Create my store</button>
+          <p class="signup-note" data-i18n="signup_note">Free to start · No credit card · We reply within 24 hours</p>
+
+          <div class="signup-success hidden" id="signup-success">
+            <div class="success-ico">🎉</div>
+            <h3 data-i18n="signup_success_title">You're almost there!</h3>
+            <p data-i18n="signup_success_text">Thanks — we've received your request and will email you within 24 hours to launch your store.</p>
+            <button class="btn btn-outline" type="button" id="signup-again" data-i18n="signup_again">Submit another</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <div class="brand">
+          <img class="brand-logo" src="img/shoptrolley.png" alt="ShopTrolley" />
+          <span class="brand-name">ShopTrolley</span>
+        </div>
+        <p data-i18n="footer_tagline">Telegram Mini-App e-commerce for Indonesia, Vietnam & Brazil.</p>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer_product">Product</h4>
+        <a href="#features" data-i18n="nav_features">Features</a>
+        <a href="#how" data-i18n="nav_how">How it works</a>
+        <a href="#pricing" data-i18n="nav_pricing">Pricing</a>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer_company">Company</h4>
+        <a href="#markets" data-i18n="nav_markets">Markets</a>
+        <a href="#testimonials" data-i18n="footer_testimonials">Testimonials</a>
+        <a href="#faq" data-i18n="nav_faq">FAQ</a>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer_legal">Legal</h4>
+        <a href="#" data-i18n="footer_tos">Terms of Service</a>
+        <a href="#" data-i18n="footer_privacy">Privacy Policy</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span id="year">2026</span> ShopTrolley. <span data-i18n="footer_rights">All rights reserved.</span></span>
+      <span data-i18n="footer_made">Made for Telegram merchants.</span>
+    </div>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
