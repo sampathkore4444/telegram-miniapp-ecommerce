@@ -1,13 +1,14 @@
 from decimal import Decimal
 
 from fastapi import APIRouter, Query
+from fastapi.responses import Response
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentAdmin, DbDep
 from app.api.orders import order_to_public
 from app.core.errors import AppError, NotFoundError
 from app.models import Order, OrderStatus, PaymentMethod, User
-from app.schemas.order import OrderStatusUpdate, RefundRequest
+from app.schemas.order import OrderStatusUpdate, RefundRequest, TrackingUpdate
 from app.services.orders import (
     change_order_status,
     get_order_or_404,
@@ -70,6 +71,68 @@ async def admin_list_orders(
     return {"items": items, "total": total, "page": page, "page_size": page_size, "pages": pages}
 
 
+ORDERS_CSV_HEADERS = [
+    "order_number",
+    "status",
+    "payment_method",
+    "payment_status",
+    "customer",
+    "recipient_name",
+    "recipient_phone",
+    "delivery_address",
+    "subtotal",
+    "delivery_fee",
+    "discount",
+    "total",
+    "coupon_code",
+    "tracking_number",
+    "tracking_carrier",
+    "created_at",
+]
+
+
+@router.get("/export", response_model=None)
+async def admin_export_orders(db: DbDep, admin: CurrentAdmin):
+    """Download every order as CSV."""
+    import csv
+    import io
+
+    result = await db.execute(select(Order).order_by(Order.id))
+    orders = result.scalars().all()
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=ORDERS_CSV_HEADERS)
+    writer.writeheader()
+    for o in orders:
+        user = await db.get(User, o.user_id)
+        writer.writerow(
+            {
+                "order_number": o.order_number,
+                "status": o.status.value if o.status else "",
+                "payment_method": o.payment_method.value if o.payment_method else "",
+                "payment_status": o.payment_status.value if o.payment_status else "",
+                "customer": user.display_name if user else "",
+                "recipient_name": o.recipient_name,
+                "recipient_phone": o.recipient_phone,
+                "delivery_address": o.delivery_address,
+                "subtotal": float(o.subtotal),
+                "delivery_fee": float(o.delivery_fee),
+                "discount": float(o.discount),
+                "total": float(o.total),
+                "coupon_code": o.coupon_code or "",
+                "tracking_number": o.tracking_number or "",
+                "tracking_carrier": o.tracking_carrier or "",
+                "created_at": o.created_at.isoformat() if o.created_at else "",
+            }
+        )
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="orders_export.csv"'},
+    )
+
+
 @router.get("/{order_id}", response_model=dict)
 async def admin_get_order(order_id: int, db: DbDep, admin: CurrentAdmin):
     order = await get_order_or_404(db, order_id)
@@ -102,6 +165,42 @@ async def admin_update_order_status(
     user = await db.get(User, order.user_id)
     if user:
         await notify_buyer_order_update(order, user, store)
+
+    refreshed = await get_order_or_404(db, order_id)
+    d = order_to_public(refreshed).model_dump()
+    d["customer"] = (
+        {"telegram_id": user.telegram_id, "display_name": user.display_name} if user else None
+    )
+    return d
+
+
+@router.patch("/{order_id}/tracking", response_model=dict)
+async def admin_set_tracking(
+    order_id: int, payload: TrackingUpdate, db: DbDep, admin: CurrentAdmin
+):
+    """Attach a courier + tracking number to an order."""
+    order = await get_order_or_404(db, order_id)
+    data = payload.model_dump(exclude_unset=True)
+    order.tracking_number = data.get("tracking_number")
+    order.tracking_carrier = data.get("tracking_carrier")
+    await db.commit()
+
+    store = await get_store_settings(db)
+    user = await db.get(User, order.user_id)
+    if user and order.tracking_number:
+        try:
+            await notify_buyer_order_update(
+                order,
+                user,
+                store,
+                message=(
+                    f"Your order {order.order_number} is on the way!\n"
+                    f"Carrier: {order.tracking_carrier or 'Courier'}\n"
+                    f"Tracking: {order.tracking_number}"
+                ),
+            )
+        except Exception:  # notifications are best-effort
+            pass
 
     refreshed = await get_order_or_404(db, order_id)
     d = order_to_public(refreshed).model_dump()

@@ -10,6 +10,7 @@ import { renderCart } from "./views/cart.js";
 import { renderCheckout } from "./views/checkout.js";
 import { renderOrders } from "./views/orders.js";
 import { renderOrder } from "./views/order.js";
+import { renderPayment } from "./views/payment.js";
 import { renderProfile } from "./views/profile.js";
 import { renderLogin } from "./views/login.js";
 import { renderWishlist } from "./views/wishlist.js";
@@ -24,6 +25,7 @@ import { renderSettings } from "./views/admin/settings.js";
 import { renderCoupons } from "./views/admin/coupons.js";
 import { renderReviews } from "./views/admin/reviews.js";
 import { renderCustomers, renderCustomerDetail } from "./views/admin/customers.js";
+import { renderBroadcasts } from "./views/admin/broadcasts.js";
 
 function registerRoutes() {
   registerRoute("home", renderHome, { title: "Shop" });
@@ -32,6 +34,7 @@ function registerRoutes() {
   registerRoute("checkout", renderCheckout, { title: "Checkout" });
   registerRoute("orders", renderOrders, { title: "My orders" });
   registerRoute("order/:id", renderOrder);
+  registerRoute("pay/order/:id", renderPayment);
   registerRoute("wishlist", renderWishlist, { title: "Wishlist" });
   registerRoute("profile", renderProfile, { title: "Profile" });
   registerRoute("login", renderLogin, { title: "Sign in" });
@@ -48,6 +51,7 @@ function registerRoutes() {
   registerRoute("admin/reviews", renderReviews, { title: "Reviews" });
   registerRoute("admin/customers", renderCustomers, { title: "Customers" });
   registerRoute("admin/customer/:id", renderCustomerDetail);
+  registerRoute("admin/broadcasts", renderBroadcasts, { title: "Broadcasts" });
   registerRoute("notfound", async (root) => {
     root.innerHTML = `<div class="empty"><span class="ico">&#129300;</span>Page not found</div>`;
   });

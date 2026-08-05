@@ -98,3 +98,13 @@ async def send_telegram_message(chat_id: int, text: str, bot_token: str | None =
     except httpx.HTTPError as exc:
         logger.warning("telegram send error: %s", exc)
         return False
+
+
+async def notify_admins(text: str, bot_token: str | None = None) -> int:
+    """Send a message to every configured admin. Returns how many were delivered."""
+    sent = 0
+    for admin_id in settings.admin_ids:
+        ok = await send_telegram_message(admin_id, text, bot_token=bot_token)
+        if ok:
+            sent += 1
+    return sent

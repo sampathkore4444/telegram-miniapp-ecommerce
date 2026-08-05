@@ -39,6 +39,9 @@ class Product(Base, TimestampMixin):
     variants: Mapped[list["ProductVariant"]] = relationship(
         back_populates="product", cascade="all, delete-orphan", lazy="selectin"
     )
+    recently_viewed: Mapped[list["RecentlyViewed"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan"
+    )
 
     @property
     def in_stock(self) -> bool:

@@ -19,6 +19,8 @@ class SettingsUpdate(BaseModel):
     free_delivery_threshold: float | None = Field(default=None, ge=0)
     bank_qr_enabled: bool | None = None
     cod_enabled: bool | None = None
+    online_payments_enabled: bool | None = None
+    low_stock_threshold: int | None = Field(default=None, ge=0, le=1000)
     bank_name: str | None = Field(default=None, max_length=120)
     bank_account_name: str | None = Field(default=None, max_length=120)
     bank_account_number: str | None = Field(default=None, max_length=64)

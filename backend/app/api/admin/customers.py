@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query
+from fastapi.responses import Response
 from sqlalchemy import func, or_, select
 
 from app.api.deps import CurrentAdmin, DbDep
@@ -84,6 +85,58 @@ async def admin_list_customers(
     order_counts, spent, last_order = await _aggregates(db)
     items = [_to_public(u, order_counts, spent, last_order) for u in users]
     return Page(items=items, total=total, page=page, page_size=page_size, pages=pages)
+
+
+CUSTOMERS_CSV_HEADERS = [
+    "telegram_id",
+    "display_name",
+    "username",
+    "first_name",
+    "last_name",
+    "phone",
+    "is_active",
+    "orders_count",
+    "total_spent",
+    "last_order_at",
+    "created_at",
+]
+
+
+@router.get("/export", response_model=None)
+async def admin_export_customers(db: DbDep, admin: CurrentAdmin):
+    """Download every buyer as CSV."""
+    import csv
+    import io
+
+    result = await db.execute(select(User).where(User.role != "admin").order_by(User.id))
+    users = result.scalars().all()
+    order_counts, spent, last_order = await _aggregates(db)
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=CUSTOMERS_CSV_HEADERS)
+    writer.writeheader()
+    for u in users:
+        writer.writerow(
+            {
+                "telegram_id": u.telegram_id,
+                "display_name": u.display_name,
+                "username": u.username or "",
+                "first_name": u.first_name or "",
+                "last_name": u.last_name or "",
+                "phone": u.phone or "",
+                "is_active": "1" if u.is_active else "0",
+                "orders_count": order_counts.get(u.id, 0),
+                "total_spent": spent.get(u.id, 0.0),
+                "last_order_at": last_order.get(u.id, ""),
+                "created_at": u.created_at.isoformat() if u.created_at else "",
+            }
+        )
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="customers_export.csv"'},
+    )
 
 
 @router.get("/{customer_id}", response_model=CustomerDetail)

@@ -70,14 +70,21 @@ async def _trigger_restock_alerts(
     old_variant_stocks: dict[int, int],
     variants: list[ProductVariant],
 ) -> None:
-    """Fire back-in-stock alerts for anything that moved from 0 to >0 stock."""
-    from app.services.stock_alerts import trigger_stock_alerts
+    """Fire back-in-stock alerts for buyers and low-stock alerts for admins."""
+    from app.services.stock_alerts import alert_admin_low_stock, trigger_stock_alerts
+    from app.services.orders import get_store_settings
+
+    store = await get_store_settings(db)
+    threshold = getattr(store, "low_stock_threshold", 5) or 5
 
     if old_stock == 0 and product.stock > 0:
         await trigger_stock_alerts(db, product)
+    await alert_admin_low_stock(db, product, threshold, old_stock, product.stock)
     for v in variants:
-        if old_variant_stocks.get(v.id, 0) == 0 and v.stock > 0:
+        old = old_variant_stocks.get(v.id, 0)
+        if old == 0 and v.stock > 0:
             await trigger_stock_alerts(db, product, v)
+        await alert_admin_low_stock(db, product, threshold, old, v.stock, variant=v)
 
 
 def _slugify(name: str) -> str:
@@ -298,10 +305,14 @@ async def admin_import_products(file: UploadFile, db: DbDep, admin: CurrentAdmin
 
     await db.commit()
 
-    from app.services.stock_alerts import trigger_stock_alerts
+    from app.services.stock_alerts import alert_admin_low_stock, trigger_stock_alerts
+    from app.services.orders import get_store_settings
 
+    store = await get_store_settings(db)
+    threshold = getattr(store, "low_stock_threshold", 5) or 5
     for product in restocked:
         await trigger_stock_alerts(db, product)
+        await alert_admin_low_stock(db, product, threshold, 0, product.stock)
     await db.commit()
 
     return {
@@ -338,6 +349,14 @@ async def admin_create_product(payload: ProductCreate, db: DbDep, admin: Current
         await db.rollback()
         raise ConflictError("A product with this slug already exists.")
     product = await _get_product(db, product.id)
+
+    from app.services.stock_alerts import alert_admin_product_created_low_stock
+    from app.services.orders import get_store_settings
+
+    store = await get_store_settings(db)
+    threshold = getattr(store, "low_stock_threshold", 5) or 5
+    await alert_admin_product_created_low_stock(product, threshold)
+    await db.commit()
     return _admin_product_dict(product)
 
 

@@ -9,6 +9,11 @@ export async function renderOrder(root, params) {
 
   const cancellable = ["pending", "pending_payment"].includes(order.status);
   const canSubmitProof = ["pending_payment", "rejected"].includes(order.status) && order.payment_method === "bank_qr";
+  const payLabel = order.payment_method === "cod"
+    ? "Cash on delivery"
+    : order.payment_method === "online"
+      ? "Online payment"
+      : "Bank QR payment";
 
   const statusColor = (s) => ({
     pending: "var(--amber)", pending_payment: "var(--amber)", under_review: "var(--accent)",
@@ -28,7 +33,7 @@ export async function renderOrder(root, params) {
             <button class="btn btn-sm btn-outline" id="share" style="padding:6px 10px">Share</button>
           </div>
         </div>
-        <p class="small muted" style="margin:6px 0 0">Placed ${fmtDate(order.created_at)} · ${esc(order.payment_method === "cod" ? "Cash on delivery" : "Bank QR payment")}</p>
+        <p class="small muted" style="margin:6px 0 0">Placed ${fmtDate(order.created_at)} · ${esc(payLabel)}</p>
       </div>
 
       <div class="card section-title">Status</div>
@@ -77,6 +82,24 @@ export async function renderOrder(root, params) {
         ${order.transaction_ref ? `<div class="row" style="margin-top:8px"><span class="row-label">Ref</span><span class="row-value">${esc(order.transaction_ref)}</span></div>` : ""}
       </div>` : ""}
 
+      ${order.payment_method === "online" ? `
+      <div class="card section-title">Payment</div>
+      <div class="card">
+        ${order.payment_status === "paid"
+          ? `<div class="step-note" style="background:var(--green-bg);color:var(--green)">Payment received${order.paid_at ? " " + fmtDate(order.paid_at) : ""}</div>`
+          : order.status === "rejected"
+          ? `<div class="step-note" style="background:var(--red-bg);color:var(--red)">Payment was declined. You can pay again.</div>`
+          : `<div class="step-note">Payment not yet confirmed.</div>`}
+        ${!order.paid_at ? `<button class="btn btn-primary grow" id="pay-online" style="width:100%;margin-top:10px">${order.status === "rejected" ? "Pay again" : "Pay now"}</button>` : ""}
+      </div>` : ""}
+
+      ${order.tracking_number ? `
+      <div class="card section-title">Tracking</div>
+      <div class="card">
+        <div class="row"><span class="row-label">Carrier</span><span class="row-value">${esc(order.tracking_carrier || "Courier")}</span></div>
+        <div class="row"><span class="row-label">Tracking no.</span><span class="row-value">${esc(order.tracking_number)}</span></div>
+      </div>` : ""}
+
       ${order.cancel_reason ? `<div class="step-note" style="background:var(--red-bg);color:var(--red)">${esc(order.cancel_reason)}</div>` : ""}
       ${order.refund_reason ? `<div class="step-note" style="background:var(--red-bg);color:var(--red)">Refunded (${esc(order.refund_reason)})${order.refunded_at ? ` · ${fmtDate(order.refunded_at)}` : ""}</div>` : ""}
 
@@ -118,6 +141,14 @@ export async function renderOrder(root, params) {
   });
 
   host.querySelector("#back")?.addEventListener("click", () => navigate("orders"));
+  host.querySelector("#pay-online")?.addEventListener("click", async () => {
+    try {
+      const pay = await api.post(`/api/orders/${order.id}/pay`);
+      navigate((pay.payment_url || `order/${order.id}`).replace(/^#\/?/, ""));
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  });
   host.querySelector("#reorder")?.addEventListener("click", async () => {
     try {
       const res = await api.post(`/api/orders/${order.id}/reorder`);

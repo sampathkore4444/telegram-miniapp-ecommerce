@@ -40,6 +40,12 @@ class User(Base, TimestampMixin):
     stock_alerts: Mapped[list["StockAlert"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    addresses: Mapped[list["UserAddress"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    recently_viewed: Mapped[list["RecentlyViewed"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
     @property
     def display_name(self) -> str:

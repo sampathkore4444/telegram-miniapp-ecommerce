@@ -23,7 +23,13 @@ export async function renderCheckout(root) {
 
   const qrEnabled = store.bank_qr_enabled;
   const codEnabled = store.cod_enabled;
-  let method = qrEnabled ? "bank_qr" : "cod";
+  const onlineEnabled = store.online_payments_enabled;
+  let method = qrEnabled ? "bank_qr" : codEnabled ? "cod" : onlineEnabled ? "online" : "cod";
+
+  let addresses = [];
+  try {
+    addresses = (await api.get("/api/addresses")).items || [];
+  } catch { /* ignore */ }
 
   const host = el(`
     <div class="container sticky-page">
@@ -37,6 +43,14 @@ export async function renderCheckout(root) {
         <div class="field" style="margin-bottom:0"><label>Note (optional)</label><input class="input" id="note" placeholder="Delivery instructions" /></div>
       </div>
 
+      ${addresses.length ? `
+      <div class="card section-title">Saved addresses</div>
+      <div class="card">
+        <div class="chips" id="addr-chips" style="padding-bottom:0">
+          ${addresses.map((a) => `<button class="chip" data-id="${a.id}" title="${esc(a.address)}">${esc(a.label || `${a.recipient_name} · ${a.address.slice(0, 22)}`)}${a.is_default ? " · Default" : ""}</button>`).join("")}
+        </div>
+      </div>` : ""}
+
       <div class="card section-title">Payment method</div>
       <div class="card" id="pay-options" style="padding-bottom:6px">
         ${qrEnabled ? `
@@ -44,6 +58,12 @@ export async function renderCheckout(root) {
           <span class="radio"></span>
           <span class="ico">&#128179;</span>
           <div><div class="name">Bank QR</div><div class="desc">Pay by scanning the shop's QR code</div></div>
+        </div>` : ""}
+        ${onlineEnabled ? `
+        <div class="pay-option ${method === "online" ? "selected" : ""}" data-method="online">
+          <span class="radio"></span>
+          <span class="ico">&#128158;</span>
+          <div><div class="name">Online payment</div><div class="desc">Pay instantly with card or wallet</div></div>
         </div>` : ""}
         ${codEnabled ? `
         <div class="pay-option ${method === "cod" ? "selected" : ""}" data-method="cod">
@@ -134,6 +154,17 @@ export async function renderCheckout(root) {
     });
   });
 
+  host.querySelectorAll("#addr-chips .chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const a = addresses.find((x) => String(x.id) === chip.dataset.id);
+      if (!a) return;
+      host.querySelector("#name").value = a.recipient_name;
+      host.querySelector("#phone").value = a.recipient_phone;
+      host.querySelector("#address").value = a.address;
+      toast("Address filled in", "info", 1500);
+    });
+  });
+
   host.querySelector("#place").addEventListener("click", async () => {
     const payload = {
       payment_method: method,
@@ -153,7 +184,12 @@ export async function renderCheckout(root) {
     try {
       const order = await api.post("/api/orders/checkout", payload);
       applyCountBadge(0);
-      renderSuccess(order);
+      if (method === "online") {
+        const pay = await api.post(`/api/orders/${order.id}/pay`);
+        renderPayRedirect(order, pay);
+      } else {
+        renderSuccess(order);
+      }
     } catch (err) {
       toast(err.message, "error");
       btn.disabled = false;
@@ -162,6 +198,26 @@ export async function renderCheckout(root) {
   });
 
   root.appendChild(host);
+
+  function renderPayRedirect(order, pay) {
+    root.innerHTML = "";
+    const success = el(`
+      <div class="container">
+        <div class="card center" style="padding:28px 16px">
+          <div style="width:72px;height:72px;margin:0 auto;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:34px">&#128179;</div>
+          <h1 class="title" style="margin:14px 0 6px">Pay ${money(order.total, store)}</h1>
+          <p class="muted">Order <b>${esc(order.order_number)}</b></p>
+          <p class="muted small" style="margin-top:8px">You'll be taken to the secure payment page to complete your order.</p>
+          <button class="btn btn-primary" id="pay-now" style="margin-top:18px">Pay now</button>
+        </div>
+        <button class="btn btn-outline" id="later" style="width:100%">View order details</button>
+      </div>`);
+    success.querySelector("#pay-now").addEventListener("click", () => {
+      navigate((pay.payment_url || `order/${order.id}`).replace(/^#\/?/, ""));
+    });
+    success.querySelector("#later").addEventListener("click", () => navigate(`order/${order.id}`));
+    root.appendChild(success);
+  }
 
   function renderSuccess(order) {
     root.innerHTML = "";

@@ -9,6 +9,7 @@ class UserRole(str, enum.Enum):
 class PaymentMethod(str, enum.Enum):
     BANK_QR = "bank_qr"
     COD = "cod"
+    ONLINE = "online"
 
 
 class PaymentStatus(str, enum.Enum):

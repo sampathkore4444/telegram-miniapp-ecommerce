@@ -1,6 +1,6 @@
 import { api } from "../../api.js";
 import { navigate } from "../../router.js";
-import { el, esc, money, getStore, statusBadge, fmtDate } from "../../ui.js";
+import { el, esc, money, getStore, statusBadge, fmtDate, toast } from "../../ui.js";
 
 const FILTERS = [
   ["", "All"],
@@ -24,7 +24,10 @@ export async function renderAdminOrders(root) {
 
   const host = el(`
     <div class="container">
-      <h1 class="title">Orders</h1>
+      <div class="row">
+        <h1 class="title grow">Orders</h1>
+        <button class="btn btn-outline btn-sm" id="export">Export CSV</button>
+      </div>
       <input class="search" id="search" placeholder="Search by name or phone…" />
       <div class="pill-tabs" id="pills"></div>
       <div id="list"></div>
@@ -70,7 +73,7 @@ export async function renderAdminOrders(root) {
               <div class="small muted" style="margin-top:2px">
                 ${o.customer ? esc(o.customer.display_name) : "Unknown"} · ${esc(o.recipient_phone)}
               </div>
-              <div class="small muted">${esc(o.payment_method === "cod" ? "COD" : "Bank QR")} · ${fmtDate(o.created_at)}</div>
+              <div class="small muted">${esc(o.payment_method === "cod" ? "COD" : o.payment_method === "online" ? "Online" : "Bank QR")} · ${fmtDate(o.created_at)}</div>
             </div>
             <b>${money(o.total, store)}</b>
           </div>
@@ -86,6 +89,14 @@ export async function renderAdminOrders(root) {
     debounce = setTimeout(() => { state.search = e.target.value.trim(); state.page = 1; load(true); }, 300);
   });
   moreBtn.addEventListener("click", () => { state.page += 1; load(false); });
+  host.querySelector("#export").addEventListener("click", async () => {
+    try {
+      await api.download("/api/admin/orders/export", "orders_export.csv");
+      toast("Export started", "success");
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  });
 
   root.appendChild(host);
   await load(true);

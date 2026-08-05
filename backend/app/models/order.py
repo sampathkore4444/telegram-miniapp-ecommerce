@@ -68,6 +68,10 @@ class Order(Base, TimestampMixin):
     cancel_reason: Mapped[str | None] = mapped_column(Text)
     admin_note: Mapped[str | None] = mapped_column(Text)
 
+    # Tracking / courier
+    tracking_number: Mapped[str | None] = mapped_column(String(128))
+    tracking_carrier: Mapped[str | None] = mapped_column(String(64))
+
     # Refunds
     refund_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     refund_reason: Mapped[str | None] = mapped_column(Text)
@@ -78,6 +82,9 @@ class Order(Base, TimestampMixin):
         back_populates="order", cascade="all, delete-orphan", lazy="selectin"
     )
     status_logs: Mapped[list["OrderStatusLog"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan", lazy="selectin"
+    )
+    payment_transactions: Mapped[list["PaymentTransaction"]] = relationship(
         back_populates="order", cascade="all, delete-orphan", lazy="selectin"
     )
 

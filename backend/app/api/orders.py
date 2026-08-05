@@ -5,6 +5,7 @@ from app.core.errors import AppError, NotFoundError
 from app.models import CANCELLABLE_STATUSES, CartItem, Order, OrderStatus, PaymentMethod, PaymentStatus
 from app.schemas.cart import CartPublic
 from app.schemas.order import CheckoutRequest, OrderPublic, PaymentProofRequest
+from app.schemas.payment import PayResult, SimulateRequest
 from app.services.orders import (
     change_order_status,
     create_order,
@@ -13,6 +14,7 @@ from app.services.orders import (
     submit_payment_proof as services_submit_payment_proof,
 )
 from app.services.notifications import notify_buyer_order_update
+from app.services.payments.service import init_payment, settle_payment
 from app.services.uploads import save_upload
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -39,6 +41,8 @@ def order_to_public(order: Order) -> OrderPublic:
         delivery_note=order.delivery_note,
         cancel_reason=order.cancel_reason,
         admin_note=order.admin_note,
+        tracking_number=order.tracking_number,
+        tracking_carrier=order.tracking_carrier,
         refund_amount=float(order.refund_amount) if order.refund_amount is not None else None,
         refund_reason=order.refund_reason,
         refunded_at=order.refunded_at.isoformat() if order.refunded_at else None,
@@ -159,6 +163,45 @@ async def submit_payment_proof(
     await db.commit()
     refreshed = await get_order_or_404(db, order_id)
     return order_to_public(refreshed)
+
+
+@router.post("/{order_id}/pay", response_model=PayResult)
+async def pay_online(order_id: int, user: CurrentUser, db: DbDep):
+    """Initiate an online payment for an order (creates a gateway intent)."""
+    order = await _get_my_order(db, order_id, user)
+    result = await init_payment(db, order, user)
+    await db.commit()
+    return result
+
+
+@router.post("/{order_id}/pay/simulate", response_model=dict)
+async def simulate_payment(order_id: int, payload: SimulateRequest, user: CurrentUser, db: DbDep):
+    """Resolve a pending intent. Only the sandbox gateway uses this endpoint."""
+    order = await _get_my_order(db, order_id, user)
+    if order.payment_method != PaymentMethod.ONLINE:
+        raise AppError(
+            "This order cannot be paid online.", code="not_online_payment"
+        )
+    order = await settle_payment(
+        db, order, user, payload.provider_ref.strip(), payload.approved
+    )
+    await db.commit()
+
+    refreshed = await get_order_or_404(db, order_id)
+    try:
+        store = await get_store_settings(db)
+        await notify_buyer_order_update(
+            refreshed,
+            user,
+            store,
+            message=(
+                f"Your order {refreshed.order_number} was "
+                f"{'confirmed after payment' if refreshed.payment_status.value == 'paid' else 'declined by the payment gateway'}."
+            ),
+        )
+    except Exception:  # notifications are best-effort
+        pass
+    return order_to_public(refreshed).model_dump()
 
 
 @router.post("/{order_id}/reorder", response_model=dict)

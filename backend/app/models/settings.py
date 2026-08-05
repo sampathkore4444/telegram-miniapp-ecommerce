@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Numeric, String, Text
+from sqlalchemy import Boolean, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IntPk, TimestampMixin
@@ -29,6 +29,12 @@ class StoreSettings(Base, TimestampMixin):
     # Payment toggles
     bank_qr_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     cod_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    online_payments_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
+
+    # Alerts
+    low_stock_threshold: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
 
     # Bank details for QR payments
     bank_name: Mapped[str | None] = mapped_column(String(120))
@@ -53,6 +59,8 @@ class StoreSettings(Base, TimestampMixin):
             ),
             "bank_qr_enabled": self.bank_qr_enabled,
             "cod_enabled": self.cod_enabled,
+            "online_payments_enabled": self.online_payments_enabled,
+            "low_stock_threshold": self.low_stock_threshold,
             "bank_name": self.bank_name,
             "bank_account_name": self.bank_account_name,
             "bank_account_number": self.bank_account_number,

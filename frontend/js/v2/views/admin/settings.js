@@ -33,6 +33,12 @@ export async function renderSettings(root) {
         <div class="field"><label>Free delivery over (leave empty to disable)</label><input class="input" type="number" step="0.01" min="0" id="dthreshold" value="${s.free_delivery_threshold ?? ""}" /></div>
       </div>
 
+      <div class="card section-title">Stock alerts</div>
+      <div class="card">
+        <div class="field"><label>Low-stock alert threshold</label><input class="input" type="number" step="1" min="0" max="1000" id="low-stock" value="${s.low_stock_threshold ?? 5}" /></div>
+        <p class="small muted" style="margin-top:2px">Admins are notified on Telegram when a product drops to or below this stock level.</p>
+      </div>
+
       <div class="card section-title">Payments</div>
       <div class="card">
         <label class="row" style="cursor:pointer;justify-content:flex-start;gap:10px;margin-bottom:10px">
@@ -42,6 +48,10 @@ export async function renderSettings(root) {
         <label class="row" style="cursor:pointer;justify-content:flex-start;gap:10px;margin-bottom:14px">
           <input type="checkbox" id="cod-en" ${s.cod_enabled ? "checked" : ""} />
           <span>Accept <b>Cash on Delivery</b></span>
+        </label>
+        <label class="row" style="cursor:pointer;justify-content:flex-start;gap:10px;margin-bottom:14px">
+          <input type="checkbox" id="online-en" ${s.online_payments_enabled ? "checked" : ""} />
+          <span>Accept <b>Online payments</b></span>
         </label>
         <div class="field"><label>Bank name</label><input class="input" id="bname" value="${esc(s.bank_name || "")}" /></div>
         <div class="field"><label>Account holder name</label><input class="input" id="bholder" value="${esc(s.bank_account_name || "")}" /></div>
@@ -92,8 +102,10 @@ export async function renderSettings(root) {
       store_address: val("#caddr") || null,
       delivery_fee: Number(val("#dfee") || 0),
       free_delivery_threshold: val("#dthreshold") ? Number(val("#dthreshold")) : null,
+      low_stock_threshold: Number(val("#low-stock") || 0),
       bank_qr_enabled: host.querySelector("#qr-en").checked,
       cod_enabled: host.querySelector("#cod-en").checked,
+      online_payments_enabled: host.querySelector("#online-en").checked,
       bank_name: val("#bname") || null,
       bank_account_name: val("#bholder") || null,
       bank_account_number: val("#bacc") || null,

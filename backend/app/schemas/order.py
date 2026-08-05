@@ -58,6 +58,8 @@ class OrderPublic(BaseModel):
     delivery_note: str | None = None
     cancel_reason: str | None = None
     admin_note: str | None = None
+    tracking_number: str | None = None
+    tracking_carrier: str | None = None
     refund_amount: float | None = None
     refund_reason: str | None = None
     refunded_at: str | None = None
@@ -80,3 +82,8 @@ class OrderStatusUpdate(BaseModel):
 class RefundRequest(BaseModel):
     amount: float = Field(gt=0)
     reason: str = Field(default="", max_length=2000)
+
+
+class TrackingUpdate(BaseModel):
+    tracking_number: str | None = Field(default=None, max_length=128)
+    tracking_carrier: str | None = Field(default=None, max_length=64)

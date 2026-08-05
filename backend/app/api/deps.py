@@ -40,6 +40,25 @@ async def get_current_user(request: Request, db: DbDep) -> User:
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_optional_current_user(request: Request, db: DbDep) -> User | None:
+    """Like get_current_user but returns None instead of failing on bad/missing auth."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.lower().startswith("bearer "):
+        return None
+    try:
+        payload = decode_access_token(auth[7:].strip())
+        user_id = int(payload.get("sub", "0"))
+    except (jwt.PyJWTError, ValueError):
+        return None
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active:
+        return None
+    return user
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_current_user)]
+
+
 async def get_current_admin(user: CurrentUser) -> User:
     if user.role != UserRole.ADMIN:
         raise PermissionError("Admin access required", code="admin_required")

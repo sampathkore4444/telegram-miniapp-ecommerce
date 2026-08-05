@@ -1,7 +1,6 @@
 import { api } from "../../api.js";
 import { navigate } from "../../router.js";
 import { el, esc, money, getStore, fmtDate, toast, statusBadge } from "../../ui.js";
-
 export async function renderCustomers(root) {
   root.innerHTML = "";
   const store = await getStore();
@@ -9,7 +8,10 @@ export async function renderCustomers(root) {
 
   const host = el(`
     <div class="container">
-      <h1 class="title">Customers</h1>
+      <div class="row">
+        <h1 class="title grow">Customers</h1>
+        <button class="btn btn-outline btn-sm" id="export">Export CSV</button>
+      </div>
       <input class="search" id="search" placeholder="Search by name, username or phone…" />
       <div id="list"></div>
       <div class="center" style="padding:12px 0"><button class="btn btn-outline" id="more" style="display:none">Load more</button></div>
@@ -55,6 +57,14 @@ export async function renderCustomers(root) {
     debounce = setTimeout(() => { state.search = e.target.value.trim(); state.page = 1; load(true); }, 300);
   });
   moreBtn.addEventListener("click", () => { state.page += 1; load(false); });
+  host.querySelector("#export").addEventListener("click", async () => {
+    try {
+      await api.download("/api/admin/customers/export", "customers_export.csv");
+      toast("Export started", "success");
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  });
 
   root.appendChild(host);
   await load(true);

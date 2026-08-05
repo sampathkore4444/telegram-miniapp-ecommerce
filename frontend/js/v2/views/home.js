@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { api, getToken } from "../api.js";
 import { el, esc, productCard, getStore, emptyState, toast, applyCountBadge } from "../ui.js";
 
 let state = { page: 1, pageSize: 12, category: "", search: "", sort: "newest", store: null, total: 0 };
@@ -17,15 +17,27 @@ export async function renderHome(root) {
         <p>${esc(tagline)}</p>
       </header>
 
+      <div id="recent" style="display:none"></div>
+
       <div class="search-wrap">
-        <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-        <input class="search" id="search" placeholder="Search products…" value="${esc(state.search)}" />
-        <select class="sort-select" id="sort" aria-label="Sort products">
-          <option value="newest">Newest</option>
-          <option value="popular">Most popular</option>
-          <option value="price_asc">Price: low to high</option>
-          <option value="price_desc">Price: high to low</option>
-        </select>
+        <div class="search-field">
+          <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+          <input class="search" id="search" placeholder="Search products…" value="${esc(state.search)}" autocomplete="off" />
+          <button class="search-clear hidden" id="search-clear" aria-label="Clear search">&#10005;</button>
+        </div>
+        <div class="sort-bar">
+          <div class="sort-box">
+            <span class="sort-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg></span>
+            <select class="sort-select" id="sort" aria-label="Sort products">
+              <option value="newest">Newest</option>
+              <option value="popular">Most popular</option>
+              <option value="price_asc">Price: low to high</option>
+              <option value="price_desc">Price: high to low</option>
+            </select>
+            <span class="sort-chev">&#9662;</span>
+          </div>
+          <span class="result-count" id="count"></span>
+        </div>
       </div>
 
       <div class="chips" id="cats"></div>
@@ -38,7 +50,14 @@ export async function renderHome(root) {
 
   const grid = host.querySelector("#grid");
   const moreBtn = host.querySelector("#more");
+  const countEl = host.querySelector("#count");
+  const clearBtn = host.querySelector("#search-clear");
   let debounce = null;
+
+  const toggleClear = () => {
+    const hasText = host.querySelector("#search").value.length > 0;
+    clearBtn.classList.toggle("hidden", !hasText);
+  };
 
   const addToCart = async (id, btn) => {
     try {
@@ -81,6 +100,7 @@ export async function renderHome(root) {
     if (state.search) params.set("search", state.search);
     const data = await api.get(`/api/products?${params}`, false);
     state.total = data.total;
+    countEl.textContent = data.total ? `${data.total} item${data.total === 1 ? "" : "s"}` : "";
 
     if (replace) grid.innerHTML = "";
     if (data.items.length === 0 && state.page === 1) {
@@ -106,6 +126,7 @@ export async function renderHome(root) {
 
   host.querySelector("#search").addEventListener("input", (e) => {
     clearTimeout(debounce);
+    toggleClear();
     debounce = setTimeout(() => {
       state.search = e.target.value.trim();
       state.page = 1;
@@ -113,8 +134,20 @@ export async function renderHome(root) {
     }, 350);
   });
 
+  clearBtn.addEventListener("click", () => {
+    const input = host.querySelector("#search");
+    input.value = "";
+    input.focus();
+    toggleClear();
+    if (!state.search) return;
+    state.search = "";
+    state.page = 1;
+    loadProducts(true);
+  });
+
   const sortSel = host.querySelector("#sort");
   sortSel.value = state.sort;
+  toggleClear();
   sortSel.addEventListener("change", () => {
     state.sort = sortSel.value;
     state.page = 1;
@@ -129,4 +162,32 @@ export async function renderHome(root) {
   root.appendChild(host);
   loadCats();
   await loadProducts(true);
+
+  if (getToken()) {
+    try {
+      const recent = (await api.get("/api/me/recently-viewed")).items || [];
+      const recentEl = host.querySelector("#recent");
+      if (recent.length) {
+        recentEl.style.display = "";
+        recentEl.appendChild(el(`<div style="margin:2px 0 10px"><span style="font-weight:700;font-size:14px;color:var(--text-1)">Recently viewed</span></div>`));
+        const row = el(`<div class="chips" style="padding:0 0 6px;align-items:stretch"></div>`);
+        for (const p of recent) {
+          const card = productCard(p, store);
+          card.style.flex = "0 0 150px";
+          card.style.width = "150px";
+          card.addEventListener("click", (e) => {
+            if (e.target.closest(".quick-add")) return;
+            window.location.hash = `#/product/${p.id}`;
+          });
+          const qa = card.querySelector(".quick-add");
+          if (qa) qa.addEventListener("click", (e) => {
+            e.stopPropagation();
+            addToCart(p.id, qa);
+          });
+          row.appendChild(card);
+        }
+        recentEl.appendChild(row);
+      }
+    } catch { /* ignore */ }
+  }
 }

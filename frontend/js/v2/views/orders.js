@@ -67,7 +67,7 @@ export async function renderOrders(root) {
                 <b style="font-size:14px">${esc(o.order_number)}</b>
                 ${statusBadge(o.status)}
               </div>
-              <div class="small muted" style="margin-top:3px">${o.items.length} item(s) · ${esc(o.payment_method === "cod" ? "Cash on delivery" : "Bank QR")}</div>
+              <div class="small muted" style="margin-top:3px">${o.items.length} item(s) · ${esc(o.payment_method === "cod" ? "Cash on delivery" : o.payment_method === "online" ? "Online payment" : "Bank QR")}</div>
               <div class="row" style="margin-top:6px">
                 <span class="total-line" style="font-size:15px">${money(o.total, store)}</span>
                 <span class="small muted">${esc(new Date(o.created_at).toLocaleString("en-US", { day: "2-digit", month: "short" }))}</span>

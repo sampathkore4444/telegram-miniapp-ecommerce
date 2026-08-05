@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.admin import categories as admin_categories
+from app.api.admin import broadcasts as admin_broadcasts
 from app.api.admin import coupons as admin_coupons
 from app.api.admin import customers as admin_customers
 from app.api.admin import dashboard as admin_dashboard
@@ -15,7 +16,20 @@ from app.api.admin import products as admin_products
 from app.api.admin import reviews as admin_reviews
 from app.api.admin import settings as admin_settings
 from app.api.admin import uploads as admin_uploads
-from app.api import auth, cart, categories, coupons, health, orders, products, reviews, store, users, wishlist
+from app.api import (
+    addresses,
+    auth,
+    cart,
+    categories,
+    coupons,
+    health,
+    orders,
+    products,
+    reviews,
+    store,
+    users,
+    wishlist,
+)
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import setup_logging
@@ -74,6 +88,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
     app.include_router(users.router, prefix="/api")
+    app.include_router(addresses.router, prefix="/api")
     app.include_router(categories.router, prefix="/api")
     app.include_router(products.router, prefix="/api")
     app.include_router(store.router, prefix="/api")
@@ -91,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_coupons.router, prefix="/api")
     app.include_router(admin_reviews.router, prefix="/api")
     app.include_router(admin_customers.router, prefix="/api")
+    app.include_router(admin_broadcasts.router, prefix="/api")
 
     # Uploaded files (public)
     from pathlib import Path

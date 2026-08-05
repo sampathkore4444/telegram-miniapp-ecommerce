@@ -2,9 +2,9 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 
-from app.api.deps import CurrentUser, DbDep
+from app.api.deps import CurrentUser, DbDep, OptionalUser
 from app.core.errors import AppError, NotFoundError
-from app.models import Category, Product, ProductVariant, StockAlert
+from app.models import Category, Product, ProductVariant, RecentlyViewed, StockAlert
 from app.schemas.catalog import ProductCreate, ProductUpdate
 from app.schemas.common import Page
 
@@ -63,11 +63,29 @@ async def list_products(
 
 
 @router.get("/{product_id}", response_model=dict)
-async def get_product(product_id: int, db: DbDep):
+async def get_product(product_id: int, db: DbDep, user: OptionalUser = None):
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()
     if product is None or product.status != "active":
         raise NotFoundError("Product not found")
+
+    if user is not None and not user.is_admin:
+        existing = (
+            await db.execute(
+                select(RecentlyViewed).where(
+                    RecentlyViewed.user_id == user.id,
+                    RecentlyViewed.product_id == product.id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            db.add(RecentlyViewed(user_id=user.id, product_id=product.id))
+        else:
+            import datetime as dt
+
+            existing.viewed_at = dt.datetime.now(dt.timezone.utc)
+        await db.commit()
+
     return product.to_public_dict()
 
 

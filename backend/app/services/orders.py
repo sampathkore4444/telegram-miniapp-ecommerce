@@ -23,6 +23,7 @@ from app.models import (
 )
 from app.schemas.order import CheckoutRequest
 from app.services.pricing import line_subtotal, unit_price_for
+from app.services.stock_alerts import alert_admin_low_stock
 
 TERMINAL_STATUSES = {
     OrderStatus.COMPLETED,
@@ -63,7 +64,7 @@ STATUS_LABELS = {
 # Allowed transitions, keyed by current status. None = only buyer-cancel/reject handled separately.
 ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
     OrderStatus.PENDING: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
-    OrderStatus.PENDING_PAYMENT: {OrderStatus.CANCELLED},
+    OrderStatus.PENDING_PAYMENT: {OrderStatus.CANCELLED, OrderStatus.CONFIRMED, OrderStatus.REJECTED},
     OrderStatus.UNDER_REVIEW: {OrderStatus.CONFIRMED, OrderStatus.REJECTED},
     OrderStatus.CONFIRMED: {OrderStatus.PROCESSING, OrderStatus.CANCELLED},
     OrderStatus.PROCESSING: {OrderStatus.SHIPPED, OrderStatus.CANCELLED},
@@ -230,6 +231,8 @@ async def create_order(
         raise AppError("Bank QR payments are currently disabled.", code="payment_disabled")
     if payload.payment_method == PaymentMethod.COD and not store.cod_enabled:
         raise AppError("Cash on delivery is currently disabled.", code="payment_disabled")
+    if payload.payment_method == PaymentMethod.ONLINE and not store.online_payments_enabled:
+        raise AppError("Online payments are currently disabled.", code="payment_disabled")
 
     products: list[tuple[Product, ProductVariant | None, int]] = []
     for item in cart_items:
@@ -301,7 +304,15 @@ async def create_order(
         )
 
     await _log_status(db, order, order.status, "Order placed", user.id)
+    stock_before = [
+        (product, variant, variant.stock if variant is not None else product.stock)
+        for product, variant, _ in products
+    ]
     await decrement_stock(db, products)
+    threshold = getattr(store, "low_stock_threshold", 5) or 5
+    for product, variant, before in stock_before:
+        after = variant.stock if variant is not None else product.stock
+        await alert_admin_low_stock(db, product, threshold, before, after, variant=variant)
     await db.flush()
     return order
 

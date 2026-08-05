@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     CART_REMINDER_HOURS: float = 24.0
     CART_REMINDER_INTERVAL_SECONDS: int = 3600
 
+    # Online payments
+    PAYMENT_GATEWAY: str = "sandbox"
+
     @property
     def is_dev(self) -> bool:
         return self.APP_ENV.lower() in {"development", "dev", "test"} or self.DEBUG

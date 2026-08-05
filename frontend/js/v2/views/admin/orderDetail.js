@@ -5,7 +5,7 @@ import { el, esc, money, getStore, statusBadge, fmtDate, toast, confirmBox } fro
 // Mirrors backend ALLOWED_TRANSITIONS.
 const NEXT = {
   pending: [["confirmed", "Confirm"], ["cancelled", "Cancel"]],
-  pending_payment: [["cancelled", "Cancel"]],
+  pending_payment: [["confirmed", "Confirm"], ["rejected", "Reject payment"], ["cancelled", "Cancel"]],
   under_review: [["confirmed", "Approve payment"], ["rejected", "Reject payment"]],
   confirmed: [["processing", "Start processing"], ["cancelled", "Cancel"]],
   processing: [["shipped", "Mark shipped"], ["cancelled", "Cancel"]],
@@ -44,7 +44,7 @@ export async function renderAdminOrderDetail(root, params) {
         <h1 class="title grow" style="margin-bottom:0">${esc(order.order_number)}</h1>
         ${statusBadge(order.status)}
       </div>
-      <p class="small muted" style="margin:6px 0 12px">${fmtDate(order.created_at)} · ${esc(order.payment_method === "cod" ? "Cash on delivery" : "Bank QR")} · ${esc(order.payment_status)}</p>
+      <p class="small muted" style="margin:6px 0 12px">${fmtDate(order.created_at)} · ${esc(order.payment_method === "cod" ? "Cash on delivery" : order.payment_method === "online" ? "Online payment" : "Bank QR")} · ${esc(order.payment_status)}</p>
 
       <div class="card section-title">Customer</div>
       <div class="card">
@@ -53,6 +53,13 @@ export async function renderAdminOrderDetail(root, params) {
         <div class="row"><span class="row-label">Phone</span><span class="row-value">${esc(order.recipient_phone)}</span></div>
         <div class="row" style="align-items:flex-start"><span class="row-label">Address</span><span class="row-value" style="text-align:right">${esc(order.delivery_address)}</span></div>
         ${order.delivery_note ? `<div class="row" style="align-items:flex-start"><span class="row-label">Note</span><span class="row-value" style="text-align:right">${esc(order.delivery_note)}</span></div>` : ""}
+      </div>
+
+      <div class="card section-title">Tracking</div>
+      <div class="card">
+        <div class="field"><label>Carrier</label><input class="input" id="tcarrier" value="${esc(order.tracking_carrier || "")}" placeholder="e.g. J&T Express" /></div>
+        <div class="field"><label>Tracking number</label><input class="input" id="tnum" value="${esc(order.tracking_number || "")}" placeholder="e.g. JTX123456789" /></div>
+        <button class="btn btn-primary" id="save-tracking">Save tracking</button>
       </div>
 
       <div class="card section-title">Items</div>
@@ -114,6 +121,18 @@ export async function renderAdminOrderDetail(root, params) {
     </div>`);
 
   host.querySelector("#back").addEventListener("click", () => navigate("admin/orders"));
+  host.querySelector("#save-tracking")?.addEventListener("click", async () => {
+    try {
+      await api.patch(`/api/admin/orders/${order.id}/tracking`, {
+        tracking_number: host.querySelector("#tnum").value.trim() || null,
+        tracking_carrier: host.querySelector("#tcarrier").value.trim() || null,
+      });
+      toast("Tracking saved", "success");
+      renderAdminOrderDetail(root, params);
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  });
   host.querySelector("#refund")?.addEventListener("click", async () => {
     const amount = Number(host.querySelector("#refund-amount").value);
     const reason = host.querySelector("#refund-reason").value.trim() || "Refunded by admin";
