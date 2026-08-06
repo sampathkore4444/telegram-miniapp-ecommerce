@@ -2,6 +2,7 @@
 import { isTelegramAvailable, loginWithTelegram, loginDemo } from "../auth.js";
 import { navigate } from "../router.js";
 import { el, toast } from "../ui.js";
+import { t } from "../i18n.js";
 
 export async function renderLogin(root) {
   root.innerHTML = "";
@@ -10,17 +11,17 @@ export async function renderLogin(root) {
       <div class="login-hero">
         <div class="login-logo">&#128722;</div>
         <h1>Telegram Shop</h1>
-        <p class="muted">Sign in with your Telegram account to start shopping.</p>
+        <p class="muted">${t("login.subtitle")}</p>
       </div>
       <div class="card" style="padding:18px">
         ${isTelegramAvailable()
-          ? `<button class="btn btn-primary" id="tg-login">Continue with Telegram</button>`
-          : `<p class="muted center small" style="margin-bottom:14px">Running outside Telegram — use a demo account (development mode).</p>
-             <button class="btn btn-primary" id="demo-buyer">Demo: Shop as Buyer</button>
+          ? `<button class="btn btn-primary" id="tg-login">${t("login.continue_tg")}</button>`
+          : `<p class="muted center small" style="margin-bottom:14px">${t("login.outside")}</p>
+             <button class="btn btn-primary" id="demo-buyer">${t("login.demo_buyer")}</button>
              <div style="height:10px"></div>
-             <button class="btn btn-outline" id="demo-admin">Demo: Store Owner</button>`}
+             <button class="btn btn-outline" id="demo-admin">${t("login.demo_admin")}</button>`}
       </div>
-      <p class="small muted center" style="margin-top:16px">By continuing you agree to the store's terms.</p>
+      <p class="small muted center" style="margin-top:16px">${t("login.terms")}</p>
     </div>`);
 
   host.querySelector("#tg-login")?.addEventListener("click", async () => {

@@ -2,6 +2,7 @@ import { initTelegram, isTelegramAvailable, loginWithTelegram, loginDemo, logout
 import { api, getStoredUser, getToken as apiGetToken } from "./api.js";
 import { registerRoute, navigate, startRouter } from "./router.js";
 import { toast, applyCountBadge } from "./ui.js";
+import { t, getLang, LANG_META } from "./i18n.js";
 
 // Buyer views
 import { renderHome } from "./views/home.js";
@@ -28,16 +29,16 @@ import { renderCustomers, renderCustomerDetail } from "./views/admin/customers.j
 import { renderBroadcasts } from "./views/admin/broadcasts.js";
 
 function registerRoutes() {
-  registerRoute("home", renderHome, { title: "Shop" });
+  registerRoute("home", renderHome, { titleKey: "titles.shop" });
   registerRoute("product/:id", renderProduct);
-  registerRoute("cart", renderCart, { title: "Cart" });
-  registerRoute("checkout", renderCheckout, { title: "Checkout" });
-  registerRoute("orders", renderOrders, { title: "My orders" });
+  registerRoute("cart", renderCart, { titleKey: "nav.cart" });
+  registerRoute("checkout", renderCheckout, { titleKey: "checkout.title" });
+  registerRoute("orders", renderOrders, { titleKey: "orders.title" });
   registerRoute("order/:id", renderOrder);
   registerRoute("pay/order/:id", renderPayment);
-  registerRoute("wishlist", renderWishlist, { title: "Wishlist" });
-  registerRoute("profile", renderProfile, { title: "Profile" });
-  registerRoute("login", renderLogin, { title: "Sign in" });
+  registerRoute("wishlist", renderWishlist, { titleKey: "wishlist.title" });
+  registerRoute("profile", renderProfile, { titleKey: "nav.profile" });
+  registerRoute("login", renderLogin, { titleKey: "titles.sign_in" });
 
   registerRoute("admin", renderDashboard, { title: "Admin" });
   registerRoute("admin/products", renderProducts, { title: "Products" });
@@ -62,6 +63,17 @@ function bindNav() {
   document.querySelectorAll(".nav-item").forEach((btn) => {
     btn.addEventListener("click", () => navigate(map[btn.dataset.nav]));
   });
+}
+
+function updateNavLabels() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+}
+
+function applyLangUI() {
+  document.documentElement.lang = LANG_META[getLang()].locale.split("-")[0];
+  updateNavLabels();
 }
 
 async function boot() {
@@ -107,8 +119,14 @@ async function boot() {
     updateCartBadge();
   });
 
+  window.addEventListener("langchange", () => {
+    applyLangUI();
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+
   registerRoutes();
   startRouter(document.getElementById("app"));
+  applyLangUI();
   applyNav();
   updateCartBadge();
 }

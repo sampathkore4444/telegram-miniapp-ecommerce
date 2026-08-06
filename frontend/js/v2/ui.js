@@ -1,5 +1,6 @@
 // Shared DOM/UI helpers and store settings cache.
 import { api } from "./api.js";
+import { t, getLang, LANG_META } from "./i18n.js";
 
 export function el(html) {
   const tpl = document.createElement("template");
@@ -36,7 +37,8 @@ export function fmtDate(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const locale = LANG_META[getLang()]?.locale || "en-US";
+  return d.toLocaleString(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 export function toast(message, type = "info", ms = 2600) {
@@ -47,35 +49,22 @@ export function toast(message, type = "info", ms = 2600) {
 }
 
 export function statusBadge(status) {
-  const labels = {
-    pending: "Pending",
-    pending_payment: "Awaiting payment",
-    under_review: "Payment review",
-    confirmed: "Confirmed",
-    processing: "Processing",
-    shipped: "Shipped",
-    delivered: "Delivered",
-    completed: "Completed",
-    cancelled: "Cancelled",
-    rejected: "Rejected",
-    refunded: "Refunded",
-  };
-  return `<span class="badge badge-${esc(status)}">${esc(labels[status] || status)}</span>`;
+  return `<span class="badge badge-${esc(status)}">${esc(t(`status.${status}`))}</span>`;
 }
 
 export function productCard(p, store) {
   const img = p.images && p.images.length
     ? `<img loading="lazy" src="${esc(p.images[0])}" alt="${esc(p.name)}" onerror="this.style.display='none'">`
     : `<span class="ph">&#128230;</span>`;
-  const featured = p.is_featured ? `<span class="tag tag-featured" style="position:absolute;top:8px;right:8px;z-index:2">Featured</span>` : "";
+  const featured = p.is_featured ? `<span class="tag tag-featured" style="position:absolute;top:8px;right:8px;z-index:2">${esc(t("ui.featured"))}</span>` : "";
   const onSale = p.compare_at_price && p.compare_at_price > p.price;
   const saleBadge = onSale
     ? `<span class="sale-badge">-${Math.round(((p.compare_at_price - p.price) / p.compare_at_price) * 100)}%</span>`
     : "";
   const compare = p.compare_at_price ? `<span class="compare">${money(p.compare_at_price, store)}</span>` : "";
   const stock = p.in_stock
-    ? `<span class="stock-line">${p.stock} in stock</span>`
-    : `<span class="stock-line" style="color:var(--red)">Sold out</span>`;
+    ? `<span class="stock-line">${esc(t("ui.in_stock", { n: p.stock }))}</span>`
+    : `<span class="stock-line" style="color:var(--red)">${esc(t("ui.sold_out"))}</span>`;
   return el(`
     <div class="product-card" data-id="${p.id}">
       <div class="img-wrap">${saleBadge}${featured}${img}</div>
@@ -84,7 +73,7 @@ export function productCard(p, store) {
         <div class="price">${money(p.price, store)}${compare}</div>
         ${stock}
       </div>
-      ${p.in_stock ? `<button class="quick-add" data-add="${p.id}" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>` : ""}
+      ${p.in_stock ? `<button class="quick-add" data-add="${p.id}" aria-label="${esc(t("ui.add_to_cart"))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>` : ""}
     </div>`);
 }
 
@@ -92,7 +81,7 @@ export function emptyState(ico, title, sub = "") {
   return el(`<div class="empty"><span class="ico">${ico}</span><p><b>${esc(title)}</b></p>${sub ? `<p class="small">${esc(sub)}</p>` : ""}</div>`);
 }
 
-export function modal({ title, body, onOk, okText = "Confirm", okClass = "btn-primary", okVariant = "primary" }) {
+export function modal({ title, body, onOk, okText = t("ui.confirm"), okClass = "btn-primary", okVariant = "primary" }) {
   const root = document.getElementById("modal-root");
   const close = () => root.innerHTML = "";
   const back = el(`
@@ -102,7 +91,7 @@ export function modal({ title, body, onOk, okText = "Confirm", okClass = "btn-pr
         <div class="modal-body"></div>
         ${onOk ? `
         <div class="btn-row">
-          <button class="btn btn-outline grow" data-close>Cancel</button>
+          <button class="btn btn-outline grow" data-close>${esc(t("ui.cancel"))}</button>
           <button class="btn ${okClass} grow" data-ok>${esc(okText)}</button>
         </div>` : ""}
       </div>
@@ -127,12 +116,12 @@ export function modal({ title, body, onOk, okText = "Confirm", okClass = "btn-pr
   root.appendChild(back);
 }
 
-export function confirmBox(message, title = "Are you sure?") {
+export function confirmBox(message, title = t("ui.are_you_sure")) {
   return new Promise((resolve) => {
     modal({
       title,
       body: `<p class="muted">${esc(message)}</p>`,
-      okText: "Yes, continue",
+      okText: t("ui.yes_continue"),
       okClass: "btn-danger",
       onOk: async () => resolve(true),
     });

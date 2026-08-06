@@ -1,9 +1,16 @@
 // Hash-based router for the SPA.
+import { t } from "./i18n.js";
+
 const routes = new Map();
 let current = null;
 
-export function registerRoute(pattern, handler, { title } = {}) {
-  routes.set(pattern, { handler, title });
+export function registerRoute(pattern, handler, { title, titleKey } = {}) {
+  routes.set(pattern, { handler, title, titleKey });
+}
+
+export function routeTitle(spec) {
+  if (spec.titleKey) return t(spec.titleKey);
+  return spec.title || "";
 }
 
 function parseHash() {
@@ -42,7 +49,8 @@ export function startRouter(root) {
       return;
     }
     current = { name, params };
-    document.title = spec.title ? `${spec.title} · Telegram Shop` : "Telegram Shop";
+    const rt = routeTitle(spec);
+    document.title = rt ? `${rt} · Telegram Shop` : "Telegram Shop";
     root.dataset.route = name;
     try {
       await spec.handler(root, params);

@@ -1,5 +1,6 @@
 import { api } from "./api.js";
 import { el, toast, modal } from "./ui.js";
+import { t } from "./i18n.js";
 
 const LEAFLET_VERSION = "1.9.4";
 const FALLBACK = { lat: 12.5657, lng: 104.991 };
@@ -22,7 +23,7 @@ function loadLeaflet() {
     script.onload = () => resolve();
     script.onerror = () => {
       leafletPromise = null;
-      reject(new Error("Could not load the map"));
+      reject(new Error(t("geo.map_error")));
     };
     document.head.appendChild(script);
   });
@@ -34,10 +35,10 @@ function reverseGeocode(lat, lon) {
 }
 
 function openMapPicker(lat, lng, inputEl, setStatus) {
-  setStatus("Adjust your location on the map, then confirm.", "info");
+  setStatus(t("geo.adjust"), "info");
   const host = el(`
     <div>
-      <p class="small muted" style="margin-bottom:8px">Drag the pin or tap the map to set your exact location.</p>
+      <p class="small muted" style="margin-bottom:8px">${t("geo.drag_hint")}</p>
       <div id="pick-map" style="width:100%;height:300px;border-radius:14px;overflow:hidden;z-index:0"></div>
       <p class="small geo-status" id="pick-status" hidden></p>
     </div>`);
@@ -51,20 +52,20 @@ function openMapPicker(lat, lng, inputEl, setStatus) {
   let map = null;
 
   modal({
-    title: "Choose your location",
+    title: t("geo.choose"),
     body: host,
-    okText: "Use this location",
+    okText: t("geo.use_this"),
     onOk: async () => {
-      if (!marker) throw new Error("The map is still loading. Please try again in a moment.");
+      if (!marker) throw new Error(t("geo.loading_map"));
       const pos = marker.getLatLng();
-      setPick("Resolving address…", "info");
+      setPick(t("geo.resolving"), "info");
       try {
         const address = await reverseGeocode(pos.lat, pos.lng);
         inputEl.value = address;
         inputEl.focus();
-        setStatus("Location captured — you can edit it before saving.", "ok");
+        setStatus(t("geo.captured"), "ok");
       } catch (err) {
-        throw new Error("Could not resolve the address. Please try again.");
+        throw new Error(t("geo.resolve_fail"));
       }
     },
   });
@@ -91,7 +92,7 @@ function openMapPicker(lat, lng, inputEl, setStatus) {
       });
     })
     .catch(() => {
-      setPick("Could not load the map. Please enter the address manually.", "err");
+      setPick(t("geo.map_load_fail"), "err");
     });
 }
 
@@ -103,12 +104,12 @@ export function attachGeoButton(btn, status, inputEl) {
   };
   btn.addEventListener("click", () => {
     if (!("geolocation" in navigator)) {
-      return toast("Geolocation is not supported on this device", "error");
+      return toast(t("geo.not_supported"), "error");
     }
     btn.disabled = true;
     const origLabel = btn.innerHTML;
-    btn.innerHTML = "Locating…";
-    setStatus("Getting your location…", "info");
+    btn.innerHTML = t("geo.locating");
+    setStatus(t("geo.getting"), "info");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         btn.disabled = false;
@@ -118,7 +119,7 @@ export function attachGeoButton(btn, status, inputEl) {
       () => {
         btn.disabled = false;
         btn.innerHTML = origLabel;
-        setStatus("Couldn't get your location — set the pin on the map manually.", "info");
+        setStatus(t("geo.manual_pin"), "info");
         openMapPicker(FALLBACK.lat, FALLBACK.lng, inputEl, setStatus);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }

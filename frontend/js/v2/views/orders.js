@@ -1,9 +1,9 @@
 import { api } from "../api.js";
 import { navigate } from "../router.js";
 import { el, esc, money, statusBadge, getStore, emptyState, toast, applyCountBadge } from "../ui.js";
+import { t, getLang, LANG_META } from "../i18n.js";
 
 const FILTERS = ["", "pending", "pending_payment", "under_review", "processing", "shipped", "delivered", "completed", "cancelled", "rejected", "refunded"];
-const FILTER_LABELS = { "": "All", pending: "Pending", pending_payment: "Awaiting payment", under_review: "Payment review", processing: "Processing", shipped: "Shipped", delivered: "Delivered", completed: "Completed", cancelled: "Cancelled", rejected: "Rejected", refunded: "Refunded" };
 const STATUS_COLORS = {
   pending: "var(--amber)",
   pending_payment: "var(--amber)",
@@ -25,14 +25,14 @@ export async function renderOrders(root) {
 
   const host = el(`
     <div class="container">
-      <h1 class="title">My orders</h1>
+      <h1 class="title">${t("orders.title")}</h1>
       <div class="pill-tabs" id="pills"></div>
       <div id="list"></div>
     </div>`);
 
   const pills = host.querySelector("#pills");
   for (const f of FILTERS) {
-    const pill = el(`<button class="pill ${f === status ? "active" : ""}" data-f="${f}">${FILTER_LABELS[f]}</button>`);
+    const pill = el(`<button class="pill ${f === status ? "active" : ""}" data-f="${f}">${f ? t("status." + f) : t("orders.all")}</button>`);
     pill.addEventListener("click", () => {
       status = f;
       pills.querySelectorAll(".pill").forEach((p) => p.classList.toggle("active", p === pill));
@@ -50,7 +50,7 @@ export async function renderOrders(root) {
     list.innerHTML = "";
 
     if (data.items.length === 0) {
-      list.appendChild(emptyState("&#128230;", "No orders here yet", "Your placed orders will show up in this list."));
+      list.appendChild(emptyState("&#128230;", t("orders.empty_title"), t("orders.empty_sub")));
       return;
     }
     for (const o of data.items) {
@@ -67,12 +67,12 @@ export async function renderOrders(root) {
                 <b style="font-size:14px">${esc(o.order_number)}</b>
                 ${statusBadge(o.status)}
               </div>
-              <div class="small muted" style="margin-top:3px">${o.items.length} item(s) · ${esc(o.payment_method === "cod" ? "Cash on delivery" : o.payment_method === "online" ? "Online payment" : "Bank QR")}</div>
+              <div class="small muted" style="margin-top:3px">${t("orders.items", { n: o.items.length })} · ${esc(o.payment_method === "cod" ? t("order.pay_cod") : o.payment_method === "online" ? t("order.pay_online") : t("order.pay_bankqr"))}</div>
               <div class="row" style="margin-top:6px">
                 <span class="total-line" style="font-size:15px">${money(o.total, store)}</span>
-                <span class="small muted">${esc(new Date(o.created_at).toLocaleString("en-US", { day: "2-digit", month: "short" }))}</span>
+                <span class="small muted">${esc(new Date(o.created_at).toLocaleString(LANG_META[getLang()].locale, { day: "2-digit", month: "short" }))}</span>
               </div>
-              <button class="btn btn-sm btn-outline" data-reorder style="margin-top:8px">↻ Reorder</button>
+              <button class="btn btn-sm btn-outline" data-reorder style="margin-top:8px">↻ ${t("orders.reorder")}</button>
             </div>
           </div>
         </div>`);
@@ -82,7 +82,7 @@ export async function renderOrders(root) {
         try {
           const res = await api.post(`/api/orders/${o.id}/reorder`);
           applyCountBadge(res.cart.item_count);
-          toast(`${res.added} item(s) re-added${res.skipped ? ` · ${res.skipped} unavailable` : ""}`, "success");
+          toast(`${t("orders.reordered", { n: res.added })}${res.skipped ? ` · ${t("orders.unavailable", { n: res.skipped })}` : ""}`, "success");
           navigate("cart");
         } catch (err) {
           toast(err.message, "error");

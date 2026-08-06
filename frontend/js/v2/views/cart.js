@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { navigate } from "../router.js";
 import { el, esc, money, getStore, emptyState, toast, applyCountBadge } from "../ui.js";
+import { t } from "../i18n.js";
 
 export async function renderCart(root) {
   root.innerHTML = "";
@@ -8,8 +9,8 @@ export async function renderCart(root) {
   const cart = await api.get("/api/cart");
 
   if (cart.items.length === 0) {
-    const empty = emptyState("&#128722;", "Your cart is empty", "Browse the shop and add items.");
-    empty.appendChild(el(`<div class="center" style="padding-top:8px"><button class="btn btn-primary" style="width:auto;padding:12px 28px">Start shopping</button></div>`));
+    const empty = emptyState("&#128722;", t("cart.empty_title"), t("cart.empty_sub"));
+    empty.appendChild(el(`<div class="center" style="padding-top:8px"><button class="btn btn-primary" style="width:auto;padding:12px 28px">${t("cart.start_shopping")}</button></div>`));
     empty.querySelector("button").addEventListener("click", () => navigate(""));
     const wrap = el(`<div class="container"></div>`);
     wrap.appendChild(empty);
@@ -25,15 +26,15 @@ export async function renderCart(root) {
 
   const host = el(`
     <div class="container sticky-page">
-      <h1 class="title">Your cart</h1>
+      <h1 class="title">${t("cart.title")}</h1>
 
       ${freeThreshold != null
         ? `<div class="card" style="padding:12px 14px">
             <div class="progress-row">
               <span style="font-size:13px;font-weight:600" class="${freeEligible ? "" : "muted"}">
                 ${freeEligible
-                  ? `<span style="color:var(--green)">Free delivery unlocked!</span>`
-                  : `Add <b style="color:var(--text)">${money(freeThreshold - cart.subtotal, store)}</b> more for free delivery`}
+                  ? `<span style="color:var(--green)">${t("cart.free_unlocked")}</span>`
+                  : t("cart.add_more", { n: `<b style="color:var(--text)">${money(freeThreshold - cart.subtotal, store)}</b>` })}
               </span>
               <span class="small muted" style="margin-left:auto">${Math.round(progress)}%</span>
             </div>
@@ -46,10 +47,10 @@ export async function renderCart(root) {
       <div class="sticky-bar">
         <div class="sticky-inner">
           <div>
-            <div class="small muted">Total</div>
+            <div class="small muted">${t("cart.total")}</div>
             <div class="total-line" style="font-size:18px">${money(estTotal, store)}</div>
           </div>
-          <button class="btn btn-primary grow" id="checkout">Proceed to checkout</button>
+          <button class="btn btn-primary grow" id="checkout">${t("cart.checkout")}</button>
         </div>
       </div>
     </div>`);
@@ -67,14 +68,14 @@ export async function renderCart(root) {
             <div class="grow" style="min-width:0">
               <div style="font-weight:600;font-size:14px;line-height:1.3">${esc(p.name)}</div>
               ${item.variant ? `<div class="small" style="color:var(--accent);font-weight:600">${esc(item.variant.name)}</div>` : ""}
-              <div class="small muted">${money(item.unit_price, store)} each</div>
+              <div class="small muted">${money(item.unit_price, store)} ${t("cart.each")}</div>
               <div class="row" style="margin-top:10px">
                 <div class="qty">
                   <button data-act="dec">−</button><span>${item.quantity}</span><button data-act="inc">+</button>
                 </div>
                 <div style="text-align:right">
                   <div style="font-weight:800;color:var(--text)">${money(item.unit_price * item.quantity, store)}</div>
-                  <button class="btn btn-sm btn-outline" data-act="remove" style="margin-top:5px;color:var(--red)">Remove</button>
+                  <button class="btn btn-sm btn-outline" data-act="remove" style="margin-top:5px;color:var(--red)">${t("cart.remove")}</button>
                 </div>
               </div>
             </div>

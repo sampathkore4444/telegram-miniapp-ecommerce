@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { navigate } from "../router.js";
 import { el, esc, money, getStore, toast, applyCountBadge, shareToTelegram, productDeepLink, starRow, modal } from "../ui.js";
+import { t, getLang, LANG_META } from "../i18n.js";
 
 export async function renderProduct(root, params) {
   root.innerHTML = `<div class="container"><div class="skeleton" style="height:300px"></div></div>`;
@@ -44,10 +45,10 @@ export async function renderProduct(root, params) {
       <div class="card prod-gallery" style="padding:0;overflow:hidden">
         <div class="main-img" id="main"><span id="gallery-badge"></span>${images.length ? `<img src="${esc(images[0])}" alt="${esc(product.name)}">` : `<span style="font-size:80px">&#128230;</span>`}</div>
         ${thumbs}
-        <button class="wish-btn ${wishlisted ? "active" : ""}" id="wish" aria-label="Add to wishlist" title="Wishlist">
+        <button class="wish-btn ${wishlisted ? "active" : ""}" id="wish" aria-label="${t("product.add_to_wishlist")}" title="${t("product.wishlist_title")}">
           <svg viewBox="0 0 24 24" fill="${wishlisted ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.6-9.3-9A5.4 5.4 0 0 1 12 6.3 5.4 5.4 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
         </button>
-        <button class="share-btn" id="share" aria-label="Share">
+        <button class="share-btn" id="share" aria-label="${t("product.share_aria")}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
         </button>
       </div>
@@ -55,7 +56,7 @@ export async function renderProduct(root, params) {
       <div class="card">
         <div class="row wrap">
           <h1 class="grow" style="font-size:19px;font-weight:800;line-height:1.3">${esc(product.name)}</h1>
-          ${product.is_featured ? `<span class="tag tag-featured">Featured</span>` : ""}
+          ${product.is_featured ? `<span class="tag tag-featured">${t("ui.featured")}</span>` : ""}
         </div>
         <div class="row" style="margin-top:10px">
           <span class="total-line" id="price" style="color:var(--accent);font-size:22px"></span>
@@ -63,22 +64,22 @@ export async function renderProduct(root, params) {
         </div>
         <div id="tier-hint" class="small muted" style="margin-top:4px"></div>
         <div id="variants" class="chips" style="margin-top:10px;padding:2px 0 6px"></div>
-        ${summary.count ? `<div class="row" style="margin-top:6px;align-items:center;gap:6px"><button class="link-like" id="scroll-reviews" style="background:none;border:none;padding:0;color:inherit;cursor:pointer">${starRow(summary.average)}</button><span class="small muted">${summary.average.toFixed(1)} · ${summary.count} review${summary.count === 1 ? "" : "s"}</span></div>` : ""}
+        ${summary.count ? `<div class="row" style="margin-top:6px;align-items:center;gap:6px"><button class="link-like" id="scroll-reviews" style="background:none;border:none;padding:0;color:inherit;cursor:pointer">${starRow(summary.average)}</button><span class="small muted">${summary.average.toFixed(1)} · ${t("product.review_count", { n: summary.count })}</span></div>` : ""}
         <div class="small muted" id="stock-line" style="margin-top:8px"></div>
         ${product.description ? `<div class="divider"></div><p class="muted" style="font-size:14px;white-space:pre-wrap;line-height:1.6">${esc(product.description)}</p>` : ""}
       </div>
 
       <div id="reviews-section" class="card">
         <div class="row" style="align-items:center">
-          <div class="grow"><b>Ratings & reviews</b></div>
-          <button class="btn btn-sm btn-outline" id="write-review">Write a review</button>
+          <div class="grow"><b>${t("product.reviews_title")}</b></div>
+          <button class="btn btn-sm btn-outline" id="write-review">${t("product.write_review")}</button>
         </div>
         ${summary.count ? `
         <div class="row" style="margin-top:10px;align-items:center;gap:10px">
           <span class="total-line" style="font-size:26px">${summary.average.toFixed(1)}</span>
           <div class="grow">
             ${starRow(summary.average, 16)}
-            <div class="small muted">${summary.count} rating${summary.count === 1 ? "" : "s"}</div>
+            <div class="small muted">${t("product.rating_count", { n: summary.count })}</div>
           </div>
         </div>
         <div class="divider"></div>
@@ -86,13 +87,13 @@ export async function renderProduct(root, params) {
           <div class="review-item">
             <div class="row" style="align-items:center">
               <div class="grow"><b style="font-size:13px">${esc(r.user_name)}</b></div>
-              <span class="small muted">${esc(r.created_at ? new Date(r.created_at).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" }) : "")}</span>
+              <span class="small muted">${esc(r.created_at ? new Date(r.created_at).toLocaleDateString(LANG_META[getLang()].locale, { day: "2-digit", month: "short", year: "numeric" }) : "")}</span>
             </div>
             <div class="small" style="margin-top:4px">${starRow(r.rating)}</div>
             ${r.comment ? `<p class="muted" style="font-size:14px;margin-top:6px;white-space:pre-wrap">${esc(r.comment)}</p>` : ""}
             ${r.images && r.images.length ? `<div class="row" style="margin-top:6px;gap:6px">${r.images.slice(0, 4).map((src) => `<img src="${esc(src)}" style="width:52px;height:52px;border-radius:8px;object-fit:cover" onerror="this.remove()">`).join("")}</div>` : ""}
           </div>`).join("")}` : `
-        <p class="muted small" style="margin-top:10px">No reviews yet — be the first to review this product.</p>`}
+        <p class="muted small" style="margin-top:10px">${t("product.no_reviews")}</p>`}
       </div>
 
       <footer class="page-footer">${esc(store.store_name)}</footer>
@@ -102,9 +103,9 @@ export async function renderProduct(root, params) {
           <div class="qty" id="qty">
             <button data-step="-1">−</button><span id="qty-val">1</span><button data-step="1">+</button>
           </div>
-          <button class="btn btn-outline grow" id="add-cart">Add to cart</button>
-          <button class="btn btn-primary grow" id="buy-now">Buy now</button>
-          <button class="btn btn-primary grow" id="notify" style="display:none">Notify me when back in stock</button>
+          <button class="btn btn-outline grow" id="add-cart">${t("ui.add_to_cart")}</button>
+          <button class="btn btn-primary grow" id="buy-now">${t("product.buy_now")}</button>
+          <button class="btn btn-primary grow" id="notify" style="display:none">${t("product.notify_me")}</button>
         </div>
       </div>
     </div>`);
@@ -136,7 +137,7 @@ export async function renderProduct(root, params) {
       ? `<span class="sale-badge">-${Math.round(((cmp - price) / cmp) * 100)}%</span>`
       : "";
     tierHint.innerHTML = tiers.length
-      ? `Tier pricing: ${tiers.map((t) => `${t.min_quantity}+ → ${money(t.price, store)}`).join(" · ")}`
+      ? t("product.tier_pricing", { list: tiers.map((t) => `${t.min_quantity}+ → ${money(t.price, store)}`).join(" · ") })
       : "";
     tierHint.style.display = tiers.length ? "" : "none";
   }
@@ -145,12 +146,12 @@ export async function renderProduct(root, params) {
     const cat = product.category ? ` · ${esc(product.category)}` : "";
     if (variants.length && selectedVariant) {
       stockLine.innerHTML = (selectedVariant.in_stock
-        ? `<span style="color:var(--green);font-weight:600">● In stock (${selectedVariant.stock})</span> · ${esc(selectedVariant.name)}`
-        : `<span style="color:var(--red);font-weight:600">● Sold out</span> · ${esc(selectedVariant.name)}`) + cat;
+        ? `<span style="color:var(--green);font-weight:600">● ${t("product.in_stock_n", { n: selectedVariant.stock })}</span> · ${esc(selectedVariant.name)}`
+        : `<span style="color:var(--red);font-weight:600">● ${t("ui.sold_out")}</span> · ${esc(selectedVariant.name)}`) + cat;
     } else if (!variants.length) {
       stockLine.innerHTML = (product.in_stock
-        ? `<span style="color:var(--green);font-weight:600">● In stock (${product.stock})</span>`
-        : `<span style="color:var(--red);font-weight:600">● Sold out</span>`) + cat;
+        ? `<span style="color:var(--green);font-weight:600">● ${t("product.in_stock_n", { n: product.stock })}</span>`
+        : `<span style="color:var(--red);font-weight:600">● ${t("ui.sold_out")}</span>`) + cat;
     } else {
       stockLine.innerHTML = cat;
     }
@@ -178,7 +179,7 @@ export async function renderProduct(root, params) {
         : "";
       return `<button class="chip ${sel ? "active" : ""}" data-id="${v.id}">
         ${esc(v.name)}${opts ? `<span class="chip-sub" style="display:block;font-size:11px;font-weight:500;opacity:.8">${opts}</span>` : ""}
-        <span class="chip-stock" style="display:block;font-size:11px;font-weight:500;opacity:.8;${v.in_stock ? "" : "color:var(--red)"}">${v.in_stock ? `${v.stock} in stock` : "Sold out"}</span>
+        <span class="chip-stock" style="display:block;font-size:11px;font-weight:500;opacity:.8;${v.in_stock ? "" : "color:var(--red)"}">${v.in_stock ? t("ui.in_stock", { n: v.stock }) : t("ui.sold_out")}</span>
       </button>`;
     }).join("");
     variantsBox.querySelectorAll(".chip").forEach((c) => {
@@ -220,7 +221,7 @@ export async function renderProduct(root, params) {
     try {
       const cart = await api.post("/api/cart/add", { product_id: product.id, variant_id: selectedVariant ? selectedVariant.id : null, quantity: qty });
       applyCountBadge(cart.item_count);
-      toast("Added to cart", "success");
+      toast(t("ui.added_to_cart"), "success");
       if (thenGo) navigate("cart");
     } catch (err) {
       toast(err.message, "error");
@@ -233,11 +234,11 @@ export async function renderProduct(root, params) {
       if (wishlisted) {
         await api.del(`/api/wishlist/${product.id}`);
         wishlisted = false;
-        toast("Removed from wishlist");
+        toast(t("product.removed_from_wishlist"));
       } else {
         await api.post("/api/wishlist", { product_id: product.id });
         wishlisted = true;
-        toast("Added to wishlist", "success");
+        toast(t("product.added_to_wishlist"), "success");
       }
       wishBtn.classList.toggle("active", wishlisted);
       wishBtn.querySelector("svg").setAttribute("fill", wishlisted ? "currentColor" : "none");
@@ -247,7 +248,7 @@ export async function renderProduct(root, params) {
   });
 
   host.querySelector("#share").addEventListener("click", () => {
-    shareToTelegram(`Check out ${product.name} on ${store.store_name}!`, productDeepLink(product.id, store));
+    shareToTelegram(t("product.share_text", { product: product.name, store: store.store_name }), productDeepLink(product.id, store));
   });
 
   host.querySelector("#scroll-reviews")?.addEventListener("click", () => {
@@ -264,13 +265,13 @@ export async function renderProduct(root, params) {
       if (!subscribed) {
         await api.post(`/api/products/${product.id}/stock-alert`, { variant_id: selectedVariant ? selectedVariant.id : null });
         subscribed = true;
-        notifyBtn.textContent = "Unsubscribe";
-        toast("We'll notify you when it's back in stock", "success");
+        notifyBtn.textContent = t("product.unsubscribe");
+        toast(t("product.will_notify"), "success");
       } else {
         await api.del(`/api/products/${product.id}/stock-alert`);
         subscribed = false;
-        notifyBtn.textContent = "Notify me when back in stock";
-        toast("Unsubscribed from stock alerts");
+        notifyBtn.textContent = t("product.notify_me");
+        toast(t("product.unsubscribed"));
       }
     } catch (err) {
       toast(err.message, "error");
@@ -280,11 +281,11 @@ export async function renderProduct(root, params) {
   function openReviewModal() {
     const body = el(`
       <div>
-        <p class="muted small" style="margin-bottom:8px">Tap to rate:</p>
+        <p class="muted small" style="margin-bottom:8px">${t("product.tap_to_rate")}</p>
         <div class="rate-row" id="rate">
           ${[1, 2, 3, 4, 5].map((i) => `<button data-v="${i}" style="background:none;border:none;font-size:30px;color:var(--text-3);cursor:pointer">★</button>`).join("")}
         </div>
-        <div class="field" style="margin-top:12px"><label>Your review (optional)</label><textarea class="input" id="r-comment" placeholder="How was it?"></textarea></div>
+        <div class="field" style="margin-top:12px"><label>${t("product.your_review")}</label><textarea class="input" id="r-comment" placeholder="${t("product.how_was_it")}"></textarea></div>
       </div>`);
     let rating = 0;
     const stars = body.querySelectorAll("[data-v]");
@@ -295,16 +296,16 @@ export async function renderProduct(root, params) {
     };
     stars.forEach((s) => s.addEventListener("click", () => { rating = Number(s.dataset.v); paint(); }));
     modal({
-      title: "Write a review",
+      title: t("product.write_review"),
       body,
-      okText: "Submit",
+      okText: t("ui.submit"),
       onOk: async () => {
-        if (!rating) throw new Error("Please tap a star rating");
+        if (!rating) throw new Error(t("product.rate_error"));
         await api.post(`/api/products/${product.id}/reviews`, {
           rating,
           comment: body.querySelector("#r-comment").value.trim() || null,
         });
-        toast("Thanks for your review!", "success");
+        toast(t("product.thanks_review"), "success");
         renderProduct(root, params);
       },
     });
