@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 from sqlalchemy import func, or_, select
 
-from app.api.deps import CurrentAdmin, DbDep
+from app.api.deps import AdminStore, DbDep
 from app.core.errors import NotFoundError
 from app.models import Order, OrderStatus, User
 from app.schemas.customer import CustomerDetail, CustomerUpdate
@@ -13,9 +13,11 @@ router = APIRouter(prefix="/admin/customers", tags=["admin"])
 PAID_STATUSES = {OrderStatus.COMPLETED, OrderStatus.DELIVERED}
 
 
-async def _aggregates(db: DbDep) -> tuple[dict[int, int], dict[int, float], dict[int, str]]:
+async def _aggregates(db: DbDep, store_id: int) -> tuple[dict[int, int], dict[int, float], dict[int, str]]:
     count_rows = await db.execute(
-        select(Order.user_id, func.count(Order.id)).group_by(Order.user_id)
+        select(Order.user_id, func.count(Order.id))
+        .where(Order.store_id == store_id)
+        .group_by(Order.user_id)
     )
     order_counts = {uid: int(c) for uid, c in count_rows.all()}
 
@@ -25,7 +27,7 @@ async def _aggregates(db: DbDep) -> tuple[dict[int, int], dict[int, float], dict
             func.coalesce(func.sum(Order.total), 0),
             func.max(Order.created_at),
         )
-        .where(Order.status.in_(PAID_STATUSES))
+        .where(Order.status.in_(PAID_STATUSES), Order.store_id == store_id)
         .group_by(Order.user_id)
     )
     rows = spent_rows.all()
@@ -56,7 +58,7 @@ def _to_public(user: User, order_counts, spent, last_order) -> dict:
 @router.get("", response_model=Page[dict])
 async def admin_list_customers(
     db: DbDep,
-    admin: CurrentAdmin,
+    store: AdminStore,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = None,
@@ -82,7 +84,7 @@ async def admin_list_customers(
         stmt.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     )
     users = result.scalars().all()
-    order_counts, spent, last_order = await _aggregates(db)
+    order_counts, spent, last_order = await _aggregates(db, store.id)
     items = [_to_public(u, order_counts, spent, last_order) for u in users]
     return Page(items=items, total=total, page=page, page_size=page_size, pages=pages)
 
@@ -103,14 +105,14 @@ CUSTOMERS_CSV_HEADERS = [
 
 
 @router.get("/export", response_model=None)
-async def admin_export_customers(db: DbDep, admin: CurrentAdmin):
+async def admin_export_customers(db: DbDep, store: AdminStore):
     """Download every buyer as CSV."""
     import csv
     import io
 
     result = await db.execute(select(User).where(User.role != "admin").order_by(User.id))
     users = result.scalars().all()
-    order_counts, spent, last_order = await _aggregates(db)
+    order_counts, spent, last_order = await _aggregates(db, store.id)
 
     buffer = io.StringIO()
     writer = csv.DictWriter(buffer, fieldnames=CUSTOMERS_CSV_HEADERS)
@@ -140,19 +142,19 @@ async def admin_export_customers(db: DbDep, admin: CurrentAdmin):
 
 
 @router.get("/{customer_id}", response_model=CustomerDetail)
-async def admin_get_customer(customer_id: int, db: DbDep, admin: CurrentAdmin):
+async def admin_get_customer(customer_id: int, db: DbDep, store: AdminStore):
     user = await db.get(User, customer_id)
     if user is None or user.role.value == "admin":
         raise NotFoundError("Customer not found")
 
     result = await db.execute(
         select(Order)
-        .where(Order.user_id == user.id)
+        .where(Order.user_id == user.id, Order.store_id == store.id)
         .order_by(Order.created_at.desc())
         .limit(50)
     )
     orders = result.scalars().all()
-    order_counts, spent, last_order = await _aggregates(db)
+    order_counts, spent, last_order = await _aggregates(db, store.id)
     base = _to_public(user, order_counts, spent, last_order)
     base["orders"] = [
         {
@@ -170,7 +172,7 @@ async def admin_get_customer(customer_id: int, db: DbDep, admin: CurrentAdmin):
 
 @router.patch("/{customer_id}", response_model=dict)
 async def admin_update_customer(
-    customer_id: int, payload: CustomerUpdate, db: DbDep, admin: CurrentAdmin
+    customer_id: int, payload: CustomerUpdate, db: DbDep, store: AdminStore
 ):
     user = await db.get(User, customer_id)
     if user is None or user.role.value == "admin":
@@ -180,5 +182,5 @@ async def admin_update_customer(
         setattr(user, key, value)
     await db.commit()
     await db.refresh(user)
-    order_counts, spent, last_order = await _aggregates(db)
+    order_counts, spent, last_order = await _aggregates(db, store.id)
     return _to_public(user, order_counts, spent, last_order)

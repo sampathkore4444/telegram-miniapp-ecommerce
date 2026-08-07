@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentAdmin, DbDep
+from app.api.deps import AdminStore, DbDep
 from app.core.errors import NotFoundError
 from app.models import Product, ProductReview
 from app.schemas.common import Page
@@ -26,13 +26,13 @@ def _to_public(r: ProductReview) -> ReviewPublic:
 @router.get("", response_model=Page[dict])
 async def admin_list_reviews(
     db: DbDep,
-    admin: CurrentAdmin,
+    store: AdminStore,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: str | None = Query(None, pattern="^(approved|hidden|all)$"),
     search: str | None = None,
 ):
-    stmt = select(ProductReview)
+    stmt = select(ProductReview).where(ProductReview.store_id == store.id)
     if status == "approved":
         stmt = stmt.where(ProductReview.is_approved.is_(True))
     elif status == "hidden":
@@ -58,10 +58,10 @@ async def admin_list_reviews(
 
 @router.patch("/{review_id}", response_model=dict)
 async def admin_moderate_review(
-    review_id: int, payload: ReviewModerate, db: DbDep, admin: CurrentAdmin
+    review_id: int, payload: ReviewModerate, db: DbDep, store: AdminStore
 ):
     review = await db.get(ProductReview, review_id)
-    if review is None:
+    if review is None or review.store_id != store.id:
         raise NotFoundError("Review not found")
     review.is_approved = payload.is_approved
     await db.commit()
@@ -70,9 +70,9 @@ async def admin_moderate_review(
 
 
 @router.delete("/{review_id}", status_code=204)
-async def admin_delete_review(review_id: int, db: DbDep, admin: CurrentAdmin):
+async def admin_delete_review(review_id: int, db: DbDep, store: AdminStore):
     review = await db.get(ProductReview, review_id)
-    if review is None:
+    if review is None or review.store_id != store.id:
         raise NotFoundError("Review not found")
     await db.delete(review)
     await db.commit()

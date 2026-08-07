@@ -1,15 +1,18 @@
 import datetime as dt
+from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentAdmin, DbDep
+from app.api.deps import AdminStore, DbDep, require_feature
 from app.core.errors import ConflictError, NotFoundError
-from app.models import DiscountCode
+from app.models import DiscountCode, User
 from app.schemas.common import Page
 from app.schemas.discount import DiscountCodeCreate, DiscountCodePublic, DiscountCodeUpdate
 
 router = APIRouter(prefix="/admin/coupons", tags=["admin"])
+
+CouponAdmin = Annotated[User, Depends(require_feature("coupons"))]
 
 
 def _to_public(coupon: DiscountCode) -> DiscountCodePublic:
@@ -39,13 +42,14 @@ def _normalize_datetime(value: dt.datetime | None) -> dt.datetime | None:
 @router.get("", response_model=Page[dict])
 async def admin_list_coupons(
     db: DbDep,
-    admin: CurrentAdmin,
+    store: AdminStore,
+    admin: CouponAdmin,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = None,
     active_only: bool = False,
 ):
-    stmt = select(DiscountCode)
+    stmt = select(DiscountCode).where(DiscountCode.store_id == store.id)
     if active_only:
         stmt = stmt.where(DiscountCode.is_active.is_(True))
     if search:
@@ -63,15 +67,19 @@ async def admin_list_coupons(
 
 
 @router.post("", response_model=dict)
-async def admin_create_coupon(payload: DiscountCodeCreate, db: DbDep, admin: CurrentAdmin):
+async def admin_create_coupon(payload: DiscountCodeCreate, db: DbDep, store: AdminStore, admin: CouponAdmin):
     data = payload.model_dump()
     data["code"] = data["code"].strip().upper()
-    existing = await db.execute(select(DiscountCode).where(DiscountCode.code == data["code"]))
+    existing = await db.execute(
+        select(DiscountCode).where(
+            DiscountCode.code == data["code"], DiscountCode.store_id == store.id
+        )
+    )
     if existing.scalar_one_or_none() is not None:
         raise ConflictError("A coupon with this code already exists.")
     data["active_from"] = _normalize_datetime(data.get("active_from"))
     data["active_until"] = _normalize_datetime(data.get("active_until"))
-    coupon = DiscountCode(**data)
+    coupon = DiscountCode(**data, store_id=store.id)
     db.add(coupon)
     try:
         await db.commit()
@@ -84,16 +92,20 @@ async def admin_create_coupon(payload: DiscountCodeCreate, db: DbDep, admin: Cur
 
 @router.patch("/{coupon_id}", response_model=dict)
 async def admin_update_coupon(
-    coupon_id: int, payload: DiscountCodeUpdate, db: DbDep, admin: CurrentAdmin
+    coupon_id: int, payload: DiscountCodeUpdate, db: DbDep, store: AdminStore, admin: CouponAdmin
 ):
     coupon = await db.get(DiscountCode, coupon_id)
-    if coupon is None:
+    if coupon is None or coupon.store_id != store.id:
         raise NotFoundError("Coupon not found")
     data = payload.model_dump(exclude_unset=True)
     if data.get("code") is not None:
         new_code = data["code"].strip().upper()
         dup = await db.execute(
-            select(DiscountCode).where(DiscountCode.code == new_code, DiscountCode.id != coupon_id)
+            select(DiscountCode).where(
+                DiscountCode.code == new_code,
+                DiscountCode.store_id == store.id,
+                DiscountCode.id != coupon_id,
+            )
         )
         if dup.scalar_one_or_none() is not None:
             raise ConflictError("A coupon with this code already exists.")
@@ -110,9 +122,9 @@ async def admin_update_coupon(
 
 
 @router.delete("/{coupon_id}", status_code=204)
-async def admin_delete_coupon(coupon_id: int, db: DbDep, admin: CurrentAdmin):
+async def admin_delete_coupon(coupon_id: int, db: DbDep, store: AdminStore, admin: CouponAdmin):
     coupon = await db.get(DiscountCode, coupon_id)
-    if coupon is None:
+    if coupon is None or coupon.store_id != store.id:
         raise NotFoundError("Coupon not found")
     await db.delete(coupon)
     await db.commit()

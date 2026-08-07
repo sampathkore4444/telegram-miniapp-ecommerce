@@ -1,5 +1,5 @@
 import { api } from "../../api.js";
-import { el, esc, toast, confirmBox, modal } from "../../ui.js";
+import { el, esc, toast, confirmBox, modal, getStore } from "../../ui.js";
 
 function fmtDate(v) {
   if (!v) return "—";
@@ -8,6 +8,11 @@ function fmtDate(v) {
 
 export async function renderCoupons(root) {
   root.innerHTML = "";
+  const store = await getStore();
+  if (!store.features?.coupons) {
+    root.innerHTML = `<div class="container"><div class="empty"><span class="ico">&#127873;</span>Coupons are available on the Growth plan or higher. Upgrade to create discount codes.</div></div>`;
+    return;
+  }
   let state = { page: 1, pageSize: 50, search: "" };
 
   const host = el(`

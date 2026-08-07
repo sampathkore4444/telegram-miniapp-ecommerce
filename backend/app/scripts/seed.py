@@ -1,4 +1,4 @@
-"""Idempotent seed: store settings, demo categories/products, owner user.
+"""Idempotent seed: owner store, store settings, demo categories/products.
 
 Safe to run on every boot; only inserts when rows are missing.
 """
@@ -9,9 +9,11 @@ import re
 from sqlalchemy import select
 
 from app.core.config import settings
+from app.core.plans import Plan
 from app.db.session import AsyncSessionLocal
-from app.models import Category, Product, StoreSettings, User, UserRole
+from app.models import Category, Product, User, UserRole
 from app.services.orders import get_store_settings
+from app.services.stores import ensure_owner_store
 
 logger = logging.getLogger("seed")
 
@@ -105,25 +107,78 @@ def _slugify(name: str) -> str:
 
 async def seed() -> None:
     async with AsyncSessionLocal() as db:
-        store = await get_store_settings(db)
-        if not store.store_name or store.store_name == "My Telegram Shop":
-            store.store_name = settings.APP_NAME
-        if not store.currency_code:
-            store.currency_code = "USD"
-            store.currency_symbol = "$"
-        db.add(store)
+        owner = None
+        if settings.admin_ids:
+            admin_tg = settings.admin_ids[0]
+            owner = (
+                await db.execute(select(User).where(User.telegram_id == admin_tg))
+            ).scalar_one_or_none()
+            if owner is None:
+                owner = User(
+                    telegram_id=admin_tg,
+                    username="owner",
+                    first_name="Store",
+                    last_name="Owner",
+                    role=UserRole.ADMIN,
+                    plan=Plan.PRO,
+                )
+                db.add(owner)
+                await db.flush()
+            else:
+                owner.role = UserRole.ADMIN
+                owner.plan = Plan.PRO
+
+        if owner is None:
+            owner = (
+                await db.execute(
+                    select(User).where(User.role == UserRole.ADMIN).order_by(User.id).limit(1)
+                )
+            ).scalar_one_or_none()
+        if owner is None:
+            owner = (
+                await db.execute(select(User).order_by(User.id).limit(1))
+            ).scalar_one_or_none()
+        if owner is None:
+            logger.warning("no owner available; skipping seed")
+            return
+
+        store = await ensure_owner_store(db, owner)
+        settings_row = await get_store_settings(db, store.id)
+        if not settings_row.store_name or settings_row.store_name == "My Telegram Shop":
+            settings_row.store_name = settings.APP_NAME
+        if not settings_row.currency_code:
+            settings_row.currency_code = "USD"
+            settings_row.currency_symbol = "$"
+        db.add(settings_row)
 
         existing_cats = {
-            c.slug for c in (await db.execute(select(Category))).scalars().all()
+            c.slug
+            for c in (
+                await db.execute(
+                    select(Category).where(Category.store_id == store.id)
+                )
+            ).scalars().all()
         }
         for cat in CATEGORIES:
             if cat["slug"] not in existing_cats:
-                db.add(Category(**cat))
+                db.add(Category(**cat, store_id=store.id))
         await db.flush()
 
-        cats = {c.slug: c for c in (await db.execute(select(Category))).scalars().all()}
+        cats = {
+            c.slug: c
+            for c in (
+                await db.execute(
+                    select(Category).where(Category.store_id == store.id)
+                )
+            ).scalars().all()
+        }
         existing_products = {
-            p.slug for p in (await db.execute(select(Product))).scalars().all()
+            p.slug
+            for p in (
+                await db.execute(
+                    select(Product).where(Product.store_id == store.id)
+                )
+            ).scalars().all()
         }
         for prod in PRODUCTS:
             slug = _slugify(prod["name"])
@@ -133,30 +188,13 @@ async def seed() -> None:
             db.add(
                 Product(
                     **data,
+                    store_id=store.id,
                     category_id=cats[prod["category"]].id if prod["category"] in cats else None,
                     slug=slug,
                     is_featured=slug in {"wireless-earbuds-pro", "cotton-oversized-t-shirt"},
                 )
             )
         await db.flush()
-
-        if settings.admin_ids:
-            admin_tg = settings.admin_ids[0]
-            owner = (
-                await db.execute(select(User).where(User.telegram_id == admin_tg))
-            ).scalar_one_or_none()
-            if owner is None:
-                db.add(
-                    User(
-                        telegram_id=admin_tg,
-                        username="owner",
-                        first_name="Store",
-                        last_name="Owner",
-                        role=UserRole.ADMIN,
-                    )
-                )
-            else:
-                owner.role = UserRole.ADMIN
 
         await db.commit()
         logger.info("seed complete")

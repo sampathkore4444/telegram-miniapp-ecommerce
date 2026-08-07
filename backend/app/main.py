@@ -15,6 +15,7 @@ from app.api.admin import orders as admin_orders
 from app.api.admin import products as admin_products
 from app.api.admin import reviews as admin_reviews
 from app.api.admin import settings as admin_settings
+from app.api.admin import stores as admin_stores
 from app.api.admin import uploads as admin_uploads
 from app.api import (
     addresses,
@@ -107,6 +108,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_uploads.router, prefix="/api")
     app.include_router(admin_coupons.router, prefix="/api")
     app.include_router(admin_reviews.router, prefix="/api")
+    app.include_router(admin_stores.router, prefix="/api")
     app.include_router(admin_customers.router, prefix="/api")
     app.include_router(admin_broadcasts.router, prefix="/api")
 

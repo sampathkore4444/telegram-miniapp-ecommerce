@@ -1,6 +1,6 @@
 import datetime as dt
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Integer, JSON, Numeric, String, Text
+from sqlalchemy import Boolean, Enum, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IntPk, TimestampMixin
@@ -9,13 +9,19 @@ from app.models.enums import CatalogStatus
 
 class Product(Base, TimestampMixin):
     __tablename__ = "products"
+    __table_args__ = (
+        UniqueConstraint("store_id", "slug", name="uq_products_store_slug"),
+    )
 
     id: Mapped[IntPk]
+    store_id: Mapped[int] = mapped_column(
+        ForeignKey("stores.id", ondelete="RESTRICT"), index=True
+    )
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id", ondelete="SET NULL"), index=True
     )
     name: Mapped[str] = mapped_column(String(160), index=True)
-    slug: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    slug: Mapped[str] = mapped_column(String(180), index=True)
     description: Mapped[str | None] = mapped_column(Text)
     price: Mapped[float] = mapped_column(Numeric(12, 2))
     compare_at_price: Mapped[float | None] = mapped_column(Numeric(12, 2))

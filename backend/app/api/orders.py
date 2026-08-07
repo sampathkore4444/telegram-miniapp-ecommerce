@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Form, Query, UploadFile
 
-from app.api.deps import CurrentUser, DbDep
+from app.api.deps import ActiveStore, CurrentUser, DbDep
 from app.core.errors import AppError, NotFoundError
 from app.models import CANCELLABLE_STATUSES, CartItem, Order, OrderStatus, PaymentMethod, PaymentStatus
 from app.schemas.cart import CartPublic
@@ -59,15 +59,19 @@ async def _get_my_order(db: DbDep, order_id: int, user) -> Order:
 
 
 @router.post("/checkout", response_model=OrderPublic)
-async def checkout(payload: CheckoutRequest, user: CurrentUser, db: DbDep):
+async def checkout(payload: CheckoutRequest, user: CurrentUser, db: DbDep, store: ActiveStore):
     from sqlalchemy import select
 
-    result = await db.execute(select(CartItem).where(CartItem.user_id == user.id))
+    result = await db.execute(
+        select(CartItem).where(
+            CartItem.user_id == user.id, CartItem.store_id == store.id
+        )
+    )
     cart_items = result.scalars().all()
     if not cart_items:
         raise AppError("Your cart is empty.", code="empty_cart")
 
-    order = await create_order(db, user, payload, cart_items)
+    order = await create_order(db, user, payload, cart_items, store_id=store.id)
 
     for item in cart_items:
         await db.delete(item)
@@ -76,14 +80,14 @@ async def checkout(payload: CheckoutRequest, user: CurrentUser, db: DbDep):
     # refresh to load relationships with committed data
     refreshed = await get_order_or_404(db, order.id)
     try:
-        store = await get_store_settings(db)
+        store_settings = await get_store_settings(db, store.id)
         await notify_buyer_order_update(
             refreshed,
             user,
-            store,
+            store_settings,
             message=(
                 f"Your order {refreshed.order_number} has been received. "
-                f"Total: {store.currency_symbol}{float(refreshed.total):.2f}."
+                f"Total: {store_settings.currency_symbol}{float(refreshed.total):.2f}."
             ),
         )
     except Exception:  # notifications are best-effort
@@ -212,6 +216,7 @@ async def reorder(order_id: int, user: CurrentUser, db: DbDep):
     from app.models import Product, ProductVariant
 
     order = await _get_my_order(db, order_id, user)
+    store_id = order.store_id
     added = 0
     skipped = 0
     for item in order.items:
@@ -234,6 +239,7 @@ async def reorder(order_id: int, user: CurrentUser, db: DbDep):
                     CartItem.user_id == user.id,
                     CartItem.product_id == product.id,
                     CartItem.variant_id == (variant.id if variant else None),
+                    CartItem.store_id == store_id,
                 )
             )
         ).scalar_one_or_none()
@@ -244,6 +250,7 @@ async def reorder(order_id: int, user: CurrentUser, db: DbDep):
             db.add(
                 CartItem(
                     user_id=user.id,
+                    store_id=store_id,
                     product_id=product.id,
                     variant_id=variant.id if variant else None,
                     quantity=qty,
@@ -254,7 +261,7 @@ async def reorder(order_id: int, user: CurrentUser, db: DbDep):
 
     from app.api.cart import _build_cart
 
-    cart = await _build_cart(db, user.id)
+    cart = await _build_cart(db, user.id, store_id)
     return {
         "cart": cart.model_dump(mode="json"),
         "added": added,

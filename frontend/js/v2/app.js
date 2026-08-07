@@ -1,8 +1,9 @@
-import { initTelegram, isTelegramAvailable, loginWithTelegram, loginDemo, logout, currentUser, isAdmin, refreshUser } from "./auth.js";
+import { initTelegram, telegram, isTelegramAvailable, loginWithTelegram, loginDemo, logout, currentUser, isAdmin, refreshUser } from "./auth.js";
 import { api, getStoredUser, getToken as apiGetToken } from "./api.js";
 import { registerRoute, navigate, startRouter } from "./router.js";
-import { toast, applyCountBadge } from "./ui.js";
+import { toast, applyCountBadge, clearStoreCache, esc, getStore } from "./ui.js";
 import { t, getLang, LANG_META } from "./i18n.js";
+import { getStoreSlug, setStoreSlug, storeSlugFromStartParam, parseStoreHash } from "./store.js";
 
 // Buyer views
 import { renderHome } from "./views/home.js";
@@ -76,8 +77,79 @@ function applyLangUI() {
   updateNavLabels();
 }
 
+// Resolve the initial store from the Telegram start_param (store_<slug>).
+function initStoreContext() {
+  if (!getStoreSlug()) {
+    const slug = storeSlugFromStartParam(telegram?.initData || "");
+    if (slug) setStoreSlug(slug);
+  }
+}
+
+let switcherLoaded = false;
+async function initStoreSwitcher() {
+  const bar = document.getElementById("store-bar");
+  const sel = document.getElementById("store-switch");
+  const pill = document.getElementById("store-pill");
+  if (!bar || !sel || !pill) return;
+  pill.classList.add("hidden");
+  sel.classList.remove("hidden");
+  sel.disabled = true;
+  bar.classList.add("hidden");
+  try {
+    const stores = await api.get("/api/admin/stores");
+    if (!stores.length) return;
+    sel.innerHTML = stores
+      .map((s) => `<option value="${esc(s.slug)}">${esc(s.name)}</option>`)
+      .join("");
+    const persisted = getStoreSlug();
+    const active = stores.find((s) => s.slug === persisted) ? persisted : stores[0].slug;
+    sel.value = active;
+    if (persisted !== active) setStoreSlug(active);
+    sel.disabled = false;
+    bar.classList.remove("hidden");
+
+    if (!sel.dataset.bound) {
+      sel.dataset.bound = "1";
+      sel.addEventListener("change", () => {
+        const slug = sel.value;
+        if (!slug) return;
+        // Rewrite the hash so the deep link stays consistent (#/s/<slug>/...).
+        const storePart = parseStoreHash(window.location.hash);
+        const rest = (storePart ? storePart.rest : window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean)).join("/");
+        const target = rest ? `#/s/${encodeURIComponent(slug)}/${rest}` : `#/s/${encodeURIComponent(slug)}`;
+        if (window.location.hash !== target) window.location.hash = target;
+      });
+    }
+  } catch {
+    bar.classList.add("hidden");
+  }
+}
+
+// Buyers see a read-only pill naming the store they're browsing.
+async function updateStorePill() {
+  const bar = document.getElementById("store-bar");
+  const sel = document.getElementById("store-switch");
+  const pill = document.getElementById("store-pill");
+  if (!bar || !sel || !pill) return;
+  const slug = getStoreSlug();
+  if (!slug) {
+    bar.classList.add("hidden");
+    return;
+  }
+  try {
+    const store = await getStore();
+    pill.textContent = store.store_name;
+    pill.classList.remove("hidden");
+    sel.classList.add("hidden");
+    bar.classList.remove("hidden");
+  } catch {
+    bar.classList.add("hidden");
+  }
+}
+
 async function boot() {
   initTelegram();
+  initStoreContext();
   bindNav();
 
   const nav = document.getElementById("nav-bar");
@@ -109,10 +181,25 @@ async function boot() {
     const authed = Boolean(user);
     nav.classList.toggle("hidden", !authed);
     document.querySelector(".admin-nav")?.classList.toggle("hidden", !isAdmin());
+    if (!authed) {
+      document.getElementById("store-bar")?.classList.add("hidden");
+    } else if (isAdmin()) {
+      if (!switcherLoaded) {
+        initStoreSwitcher().then(() => { switcherLoaded = true; });
+      }
+    } else {
+      updateStorePill();
+    }
     if (!authed && !["login"].includes(window.location.hash.replace(/^#\/?/, ""))) {
       window.location.hash = "#/login";
     }
   };
+
+  // Store changes re-render every view against the newly selected store.
+  window.addEventListener("storechange", () => {
+    clearStoreCache();
+    window.dispatchEvent(new Event("hashchange"));
+  });
 
   window.addEventListener("hashchange", () => {
     applyNav();

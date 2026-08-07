@@ -7,6 +7,9 @@ export async function renderDashboard(root) {
   const store = await getStore();
   const data = await api.get("/api/admin/dashboard");
 
+  const analytics = Boolean(store.features?.analytics);
+  const coupons = Boolean(store.features?.coupons);
+
   const max = Math.max(1, ...data.sales_last_14_days.map((d) => d.revenue));
   const bars = data.sales_last_14_days.map((d) => {
     const h = (d.revenue / max) * 100;
@@ -41,11 +44,12 @@ export async function renderDashboard(root) {
         <div class="kpi"><div class="k-label">Products</div><div class="k-value">${data.products_count}</div></div>
         <div class="kpi"><div class="k-label">Low stock (≤5)</div><div class="k-value" style="${data.low_stock_count ? "color:var(--red)" : ""}">${data.low_stock_count}</div></div>
         <div class="kpi"><div class="k-label">Customers</div><div class="k-value">${data.customers_count}</div></div>
-        <div class="kpi"><div class="k-label">Avg order value</div><div class="k-value">${money(data.avg_order_value || 0, store)}</div></div>
-        <div class="kpi"><div class="k-label">Repeat customers</div><div class="k-value">${data.repeat_customer_rate || 0}%</div></div>
-        <div class="kpi"><div class="k-label">Discounts given</div><div class="k-value">${money(data.total_discount_given || 0, store)}</div></div>
+        ${analytics ? `<div class="kpi"><div class="k-label">Avg order value</div><div class="k-value">${money(data.avg_order_value || 0, store)}</div></div>
+        <div class="kpi"><div class="k-label">Repeat customers</div><div class="k-value">${data.repeat_customer_rate || 0}%</div></div>` : ""}
+        ${coupons ? `<div class="kpi"><div class="k-label">Discounts given</div><div class="k-value">${money(data.total_discount_given || 0, store)}</div></div>` : ""}
       </div>
 
+      ${analytics ? `
       <div class="card section-title">Revenue by category</div>
       <div class="card">
         ${data.revenue_by_category.length === 0 ? '<div class="muted small">No sales yet</div>' : data.revenue_by_category.map((c) => `
@@ -53,8 +57,9 @@ export async function renderDashboard(root) {
             <span class="grow" style="font-size:14px;font-weight:600">${esc(c.name)}</span>
             <span class="small muted">${money(c.revenue, store)}</span>
           </div>`).join("")}
-      </div>
+      </div>` : ""}
 
+      ${coupons ? `
       <div class="card section-title">Coupon usage</div>
       <div class="card">
         ${data.coupon_redemptions.length === 0 ? '<div class="muted small">No coupons used yet</div>' : data.coupon_redemptions.map((c) => `
@@ -62,17 +67,19 @@ export async function renderDashboard(root) {
             <span class="grow" style="font-size:14px;font-weight:600">${esc(c.code)}</span>
             <span class="small muted">${c.redemptions}×</span>
           </div>`).join("")}
-      </div>
+      </div>` : ""}
 
+      ${analytics ? `
       <div class="card section-title">Sales · last 14 days</div>
       <div class="card">
         <div class="row" style="margin-bottom:4px"><span class="row-label">Today</span><b>${money(data.today_revenue, store)}</b></div>
         <div class="bar-chart">${bars}</div>
-      </div>
+      </div>` : ""}
 
       <div class="card section-title">Orders by status</div>
       <div class="card">${statusRows || '<div class="muted small">No orders yet</div>'}</div>
 
+      ${analytics ? `
       <div class="card section-title">Top products</div>
       <div class="card">
         ${data.top_products.length === 0 ? '<div class="muted small">No sales yet</div>' : data.top_products.map((p) => `
@@ -81,7 +88,7 @@ export async function renderDashboard(root) {
             <span class="grow" style="font-size:14px;font-weight:600">${esc(p.name)}</span>
             <span class="small muted">${p.quantity} sold</span>
           </div>`).join("")}
-      </div>
+      </div>` : ""}
 
       <div class="card section-title">Recent orders</div>
       <div class="card" style="padding:6px;overflow-x:auto">

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, status
 from app.api.deps import DbDep, rate_limit
 from app.core.config import settings
 from app.core.errors import AppError
+from app.core.plans import Plan
 from app.core.security import create_access_token
 from app.core.telegram import TelegramAuthError, extract_user, validate_init_data
 from app.models import User, UserRole
@@ -48,12 +49,16 @@ async def telegram_login(payload: TelegramLoginRequest, db: DbDep):
         raise AppError(str(exc), code="invalid_init_data", status_code=status.HTTP_401_UNAUTHORIZED) from exc
 
     user = await _upsert_user(db, user_data["telegram_id"], user_data)
+    if user.is_admin:
+        from app.services.stores import ensure_owner_store
+
+        await ensure_owner_store(db, user)
     await db.commit()
     return _auth_response(user)
 
 
 @router.post("/demo", response_model=AuthResponse, dependencies=[Depends(rate_limit(20))])
-async def demo_login(db: DbDep, role: str = "buyer"):
+async def demo_login(db: DbDep, role: str = "buyer", plan: str = "starter"):
     """Development-only login used to test the app outside Telegram."""
     if not settings.is_dev:
         raise AppError("Demo login is disabled outside development.", code="demo_disabled")
@@ -72,5 +77,13 @@ async def demo_login(db: DbDep, role: str = "buyer"):
         },
     )
     user.role = UserRole.ADMIN if role == "admin" else UserRole.BUYER
+    try:
+        user.plan = Plan(plan)
+    except ValueError:
+        raise AppError("Unknown plan", code="invalid_plan")
+    if user.is_admin:
+        from app.services.stores import ensure_owner_store
+
+        await ensure_owner_store(db, user)
     await db.commit()
     return _auth_response(user)

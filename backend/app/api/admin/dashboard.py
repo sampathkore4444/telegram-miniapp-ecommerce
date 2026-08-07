@@ -4,7 +4,8 @@ from decimal import Decimal
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentAdmin, DbDep
+from app.api.deps import AdminStore, DbDep
+from app.core.plans import feature_enabled
 from app.models import (
     Category,
     DiscountCode,
@@ -27,38 +28,60 @@ def _today_start() -> dt.datetime:
 
 
 @router.get("", response_model=DashboardStats)
-async def dashboard(db: DbDep, admin: CurrentAdmin):
-    revenue_stmt = select(func.coalesce(func.sum(Order.total), 0)).where(Order.status.in_(PAID_STATUSES))
+async def dashboard(db: DbDep, store: AdminStore):
+    revenue_stmt = (
+        select(func.coalesce(func.sum(Order.total), 0))
+        .where(Order.status.in_(PAID_STATUSES), Order.store_id == store.id)
+    )
     total_revenue = (await db.execute(revenue_stmt)).scalar() or 0
 
-    total_orders = (await db.execute(select(func.count(Order.id)))).scalar() or 0
+    total_orders = (
+        await db.execute(select(func.count(Order.id)).where(Order.store_id == store.id))
+    ).scalar() or 0
     pending_orders = (
         await db.execute(
             select(func.count(Order.id)).where(
-                Order.status.in_([OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT, OrderStatus.UNDER_REVIEW])
+                Order.store_id == store.id,
+                Order.status.in_([OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT, OrderStatus.UNDER_REVIEW]),
             )
         )
     ).scalar() or 0
-    products_count = (await db.execute(select(func.count(Product.id)))).scalar() or 0
-    low_stock_count = (
-        await db.execute(select(func.count(Product.id)).where(Product.stock <= 5))
+    products_count = (
+        await db.execute(select(func.count(Product.id)).where(Product.store_id == store.id))
     ).scalar() or 0
-    customers_count = (await db.execute(select(func.count(User.id)))).scalar() or 0
+    low_stock_count = (
+        await db.execute(
+            select(func.count(Product.id)).where(
+                Product.store_id == store.id, Product.stock <= 5
+            )
+        )
+    ).scalar() or 0
+    customers_count = (
+        await db.execute(
+            select(func.count(func.distinct(Order.user_id))).where(Order.store_id == store.id)
+        )
+    ).scalar() or 0
 
     today_start = _today_start()
     today_revenue = (
         await db.execute(
             select(func.coalesce(func.sum(Order.total), 0)).where(
-                Order.status.in_(PAID_STATUSES), Order.created_at >= today_start
+                Order.status.in_(PAID_STATUSES),
+                Order.store_id == store.id,
+                Order.created_at >= today_start,
             )
         )
     ).scalar() or 0
     today_orders = (
-        await db.execute(select(func.count(Order.id)).where(Order.created_at >= today_start))
+        await db.execute(
+            select(func.count(Order.id)).where(
+                Order.store_id == store.id, Order.created_at >= today_start
+            )
+        )
     ).scalar() or 0
 
     recent = await db.execute(
-        select(Order).order_by(Order.created_at.desc()).limit(8)
+        select(Order).where(Order.store_id == store.id).order_by(Order.created_at.desc()).limit(8)
     )
     recent_orders = [
         {
@@ -80,6 +103,8 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
             OrderItem.unit_price,
             func.sum(OrderItem.quantity).label("qty"),
         )
+        .join(Order, Order.id == OrderItem.order_id)
+        .where(Order.store_id == store.id)
         .group_by(
             OrderItem.product_id,
             OrderItem.product_name,
@@ -103,7 +128,9 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
 
     paid_count = (
         await db.execute(
-            select(func.count(Order.id)).where(Order.status.in_(PAID_STATUSES))
+            select(func.count(Order.id)).where(
+                Order.status.in_(PAID_STATUSES), Order.store_id == store.id
+            )
         )
     ).scalar() or 0
     avg_order_value = (
@@ -112,7 +139,9 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
 
     user_order_counts = (
         await db.execute(
-            select(Order.user_id, func.count(Order.id)).group_by(Order.user_id)
+            select(Order.user_id, func.count(Order.id))
+            .where(Order.store_id == store.id)
+            .group_by(Order.user_id)
         )
     ).all()
     total_customers = len(user_order_counts)
@@ -129,7 +158,7 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
         .join(Order, Order.id == OrderItem.order_id)
         .join(Product, Product.id == OrderItem.product_id)
         .outerjoin(Category, Category.id == Product.category_id)
-        .where(Order.status.in_(PAID_STATUSES))
+        .where(Order.status.in_(PAID_STATUSES), Order.store_id == store.id)
         .group_by(Category.name)
         .order_by(func.sum(OrderItem.total).desc())
     )
@@ -139,7 +168,7 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
 
     coupon_rows = await db.execute(
         select(DiscountCode.code, DiscountCode.used_count)
-        .where(DiscountCode.used_count > 0)
+        .where(DiscountCode.store_id == store.id, DiscountCode.used_count > 0)
         .order_by(DiscountCode.used_count.desc())
     )
     coupon_redemptions = [
@@ -149,7 +178,7 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
     total_discount = (
         await db.execute(
             select(func.coalesce(func.sum(Order.discount), 0)).where(
-                Order.status.in_(PAID_STATUSES)
+                Order.status.in_(PAID_STATUSES), Order.store_id == store.id
             )
         )
     ).scalar() or 0
@@ -159,7 +188,11 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
     since_start = since.replace(hour=0, minute=0, second=0, microsecond=0)
     rows = await db.execute(
         select(func.date(Order.created_at).label("day"), func.sum(Order.total).label("rev"))
-        .where(Order.status.in_(PAID_STATUSES), Order.created_at >= since_start)
+        .where(
+            Order.status.in_(PAID_STATUSES),
+            Order.store_id == store.id,
+            Order.created_at >= since_start,
+        )
         .group_by("day")
         .order_by("day")
     )
@@ -173,9 +206,15 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
     ]
 
     status_counts = await db.execute(
-        select(Order.status, func.count(Order.id)).group_by(Order.status)
+        select(Order.status, func.count(Order.id))
+        .where(Order.store_id == store.id)
+        .group_by(Order.status)
     )
     orders_by_status = {s.value if hasattr(s, "value") else str(s): c for s, c in status_counts.all()}
+
+    plan = store.owner.plan
+    has_analytics = feature_enabled(plan, "analytics")
+    has_coupons = feature_enabled(plan, "coupons")
 
     return DashboardStats(
         total_revenue=total_revenue,
@@ -187,12 +226,12 @@ async def dashboard(db: DbDep, admin: CurrentAdmin):
         today_revenue=today_revenue,
         today_orders=today_orders,
         recent_orders=recent_orders,
-        top_products=top_products,
-        sales_last_14_days=sales_last_14_days,
+        top_products=top_products if has_analytics else [],
+        sales_last_14_days=sales_last_14_days if has_analytics else [],
         orders_by_status=orders_by_status,
-        avg_order_value=avg_order_value,
-        repeat_customer_rate=repeat_customer_rate,
-        revenue_by_category=revenue_by_category,
-        coupon_redemptions=coupon_redemptions,
-        total_discount_given=total_discount,
+        avg_order_value=avg_order_value if has_analytics else 0,
+        repeat_customer_rate=repeat_customer_rate if has_analytics else 0.0,
+        revenue_by_category=revenue_by_category if has_analytics else [],
+        coupon_redemptions=coupon_redemptions if has_coupons else [],
+        total_discount_given=total_discount if has_coupons else 0,
     )

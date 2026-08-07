@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import AppError, PermissionError
+from app.core.plans import ensure_feature
 from app.core.security import decode_access_token
 from app.db.session import get_db
-from app.models import User, UserRole
+from app.models import Store, User, UserRole
 
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 
@@ -66,6 +67,55 @@ async def get_current_admin(user: CurrentUser) -> User:
 
 
 CurrentAdmin = Annotated[User, Depends(get_current_admin)]
+
+
+def require_feature(feature: str) -> Callable:
+    """Admin dependency factory that also requires a plan feature.
+
+    Usage: ``admin: Annotated[User, Depends(require_feature("coupons"))]``
+    """
+
+    async def dependency(admin: CurrentAdmin) -> User:
+        ensure_feature(admin.plan, feature)
+        return admin
+
+    return dependency
+
+
+# --- Store scoping (multi-store) ---
+
+STORE_SLUG_HEADER = "X-Store-Slug"
+
+
+async def get_active_store(request: Request, db: DbDep) -> Store:
+    """Resolve the store a request targets.
+
+    Uses the ``X-Store-Slug`` header when present; otherwise falls back to the
+    deployment's primary store so existing clients/tests keep working.
+    """
+    from app.services.stores import get_primary_store, get_store_by_slug
+
+    slug = (request.headers.get(STORE_SLUG_HEADER) or "").strip().lower()
+    if slug:
+        store = await get_store_by_slug(db, slug)
+        if store is None:
+            raise AppError("Store not found", code="store_not_found", status_code=404)
+        return store
+    return await get_primary_store(db)
+
+
+ActiveStore = Annotated[Store, Depends(get_active_store)]
+
+
+async def get_admin_store(admin: CurrentAdmin, request: Request, db: DbDep) -> Store:
+    """Active store that the current admin owns."""
+    store = await get_active_store(request, db)
+    if store.owner_id != admin.id:
+        raise PermissionError("You do not own this store", code="store_forbidden")
+    return store
+
+
+AdminStore = Annotated[Store, Depends(get_admin_store)]
 
 
 # --- Simple in-memory sliding-window rate limiter (per client) ---

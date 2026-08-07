@@ -32,6 +32,7 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+PLANS = {"starter", "growth", "pro"}
 
 
 def load_env(path: Path) -> None:
@@ -59,6 +60,7 @@ def send_signup_email(payload: dict) -> None:
         ("Store name", payload.get("store_name", "")),
         ("Your name", payload.get("name", "")),
         ("Email", payload.get("email", "")),
+        ("Plan", str(payload.get("plan", "starter")).title()),
         ("Primary market", payload.get("market", "")),
         ("Telegram", payload.get("telegram") or "—"),
         ("Language", payload.get("language", "")),
@@ -120,9 +122,13 @@ class Handler(SimpleHTTPRequestHandler):
         store = str(payload.get("store_name", "")).strip()
         name = str(payload.get("name", "")).strip()
         email = str(payload.get("email", "")).strip()
+        plan = str(payload.get("plan", "starter")).strip().lower()
 
         if not (store and name and email and EMAIL_RE.match(email)):
             self._json(400, {"ok": False, "error": "invalid"})
+            return
+        if plan not in PLANS:
+            self._json(400, {"ok": False, "error": "invalid_plan"})
             return
 
         try:
@@ -132,6 +138,7 @@ class Handler(SimpleHTTPRequestHandler):
                     "store_name": store,
                     "name": name,
                     "email": email,
+                    "plan": plan,
                     "language": str(payload.get("language", "en")),
                 }
             )

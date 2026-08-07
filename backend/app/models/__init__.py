@@ -17,6 +17,7 @@ from app.models.recently_viewed import RecentlyViewed
 from app.models.review import ProductReview
 from app.models.settings import StoreSettings
 from app.models.stock_alert import StockAlert
+from app.models.store import Store
 from app.models.user import User
 from app.models.variant import ProductVariant
 from app.models.wishlist import WishlistItem
@@ -40,6 +41,7 @@ __all__ = [
     "ProductVariant",
     "RecentlyViewed",
     "StockAlert",
+    "Store",
     "StoreSettings",
     "User",
     "UserAddress",

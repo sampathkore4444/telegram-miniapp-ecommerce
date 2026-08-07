@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from app.api.deps import CurrentAdmin, DbDep
+from app.api.deps import AdminStore, DbDep
 from app.core.config import settings
 from app.core.telegram import send_telegram_message
 from app.models import User, UserRole
@@ -11,8 +11,8 @@ router = APIRouter(prefix="/admin/broadcasts", tags=["admin"])
 
 
 @router.post("", response_model=dict)
-async def send_broadcast(payload: BroadcastRequest, db: DbDep, admin: CurrentAdmin):
-    """Send a Telegram message to every active buyer. Best-effort."""
+async def send_broadcast(payload: BroadcastRequest, db: DbDep, store: AdminStore):
+    """Send a Telegram message to every active buyer of this store. Best-effort."""
     text = payload.message.strip()
     if not text:
         return {"sent": 0, "total": 0}

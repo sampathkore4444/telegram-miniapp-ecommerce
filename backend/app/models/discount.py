@@ -1,7 +1,7 @@
 import datetime as dt
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Enum, Integer, Numeric, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, IntPk, TimestampMixin
@@ -10,9 +10,15 @@ from app.models.enums import DiscountType
 
 class DiscountCode(Base, TimestampMixin):
     __tablename__ = "discount_codes"
+    __table_args__ = (
+        UniqueConstraint("store_id", "code", name="uq_discount_codes_store_code"),
+    )
 
     id: Mapped[IntPk]
-    code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    store_id: Mapped[int] = mapped_column(
+        ForeignKey("stores.id", ondelete="RESTRICT"), index=True
+    )
+    code: Mapped[str] = mapped_column(String(32), index=True)
     discount_type: Mapped[DiscountType] = mapped_column(
         Enum(DiscountType, native_enum=False, length=8),
         default=DiscountType.PERCENT,

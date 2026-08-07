@@ -11,13 +11,14 @@ export async function renderProfile(root) {
   const me = await api.get("/api/me");
 
   const initials = (me.first_name?.[0] || "") + (me.last_name?.[0] || "") || "U";
+  const planLabel = { starter: "Starter", growth: "Growth", pro: "Pro" }[store.plan] || "Starter";
   const host = el(`
     <div class="container">
       <div class="profile-hero">
         <div class="avatar">${me.photo_url ? `<img src="${esc(me.photo_url)}" />` : esc(initials)}</div>
         <h1>${esc(me.display_name || me.first_name || t("profile.user"))}</h1>
         <p>${me.username ? "@" + esc(me.username) : t("profile.telegram_id", { id: me.telegram_id })}</p>
-        ${me.role === "admin" ? `<div style="position:relative;z-index:1;margin-top:8px"><span class="tag" style="background:rgba(255,255,255,0.2);color:#fff">${t("profile.store_owner")}</span></div>` : ""}
+        ${me.role === "admin" ? `<div style="position:relative;z-index:1;margin-top:8px"><span class="tag" style="background:rgba(255,255,255,0.2);color:#fff">${t("profile.store_owner")} · ${esc(planLabel)}</span></div>` : ""}
       </div>
 
       <div class="card section-title">${t("profile.contact_details")}</div>
@@ -55,7 +56,7 @@ export async function renderProfile(root) {
         <button class="menu-item" data-admin="admin/orders"><span class="menu-ico">&#128203;</span>${t("profile.orders")}<span class="menu-chev">›</span></button>
         <button class="menu-item" data-admin="admin/customers"><span class="menu-ico">&#128101;</span>${t("profile.customers")}<span class="menu-chev">›</span></button>
         <button class="menu-item" data-admin="admin/categories"><span class="menu-ico">&#128193;</span>${t("profile.categories")}<span class="menu-chev">›</span></button>
-        <button class="menu-item" data-admin="admin/coupons"><span class="menu-ico">&#127991;</span>${t("profile.coupons")}<span class="menu-chev">›</span></button>
+        ${store.features?.coupons ? `<button class="menu-item" data-admin="admin/coupons"><span class="menu-ico">&#127991;</span>${t("profile.coupons")}<span class="menu-chev">›</span></button>` : ""}
         <button class="menu-item" data-admin="admin/reviews"><span class="menu-ico">&#11088;</span>${t("profile.reviews")}<span class="menu-chev">›</span></button>
         <button class="menu-item" data-admin="admin/broadcasts"><span class="menu-ico">&#128227;</span>${t("profile.broadcasts")}<span class="menu-chev">›</span></button>
         <button class="menu-item" data-admin="admin/settings"><span class="menu-ico">&#9881;</span>${t("profile.settings")}<span class="menu-chev">›</span></button>

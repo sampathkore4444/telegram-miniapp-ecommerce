@@ -24,7 +24,7 @@ export async function renderCheckout(root) {
 
   const qrEnabled = store.bank_qr_enabled;
   const codEnabled = store.cod_enabled;
-  const onlineEnabled = store.online_payments_enabled;
+  const onlineEnabled = !!store.features?.online_payments && store.online_payments_enabled;
   let method = qrEnabled ? "bank_qr" : codEnabled ? "cod" : onlineEnabled ? "online" : "cod";
 
   let addresses = [];
@@ -88,6 +88,7 @@ export async function renderCheckout(root) {
         <div class="divider"></div>
         <div class="row"><span class="row-label">${t("checkout.total")}</span><span class="total-line" id="total-line">${money(total(), store)}</span></div>
         <div class="divider"></div>
+        ${store.features?.coupons ? `
         <div class="coupon-box" id="coupon-box">
           <span class="coupon-ico">&#127873;</span>
           <input class="coupon-input" id="coupon" placeholder="${t("checkout.coupon_ph")}" autocapitalize="characters" spellcheck="false" autocomplete="off" aria-label="${t("checkout.promo_code")}" />
@@ -100,7 +101,7 @@ export async function renderCheckout(root) {
           <span class="coupon-applied-amount" id="coupon-applied-amount"></span>
           <button class="coupon-remove" id="coupon-remove" title="${t("checkout.remove_coupon")}" aria-label="${t("checkout.remove_coupon")}">&#10005;</button>
         </div>
-        <p class="small coupon-msg" id="coupon-msg" role="status" aria-live="polite" hidden></p>
+        <p class="small coupon-msg" id="coupon-msg" role="status" aria-live="polite" hidden></p>` : ""}
       </div>
 
       <p class="small muted center" style="margin-top:2px">${t("checkout.stock_reserved", { store: esc(store.store_name) })}</p>
@@ -122,11 +123,13 @@ export async function renderCheckout(root) {
   };
   const couponMsg = host.querySelector("#coupon-msg");
   const setMsg = (html, kind) => {
+    if (!couponMsg) return;
     couponMsg.className = `small coupon-msg${kind ? ` ${kind}` : ""}`;
     couponMsg.innerHTML = html || "";
     couponMsg.hidden = !html;
   };
   const refreshCouponUI = () => {
+    if (!host.querySelector("#coupon-box")) return;
     const applied = couponDiscount > 0;
     host.querySelector("#coupon-box").style.display = applied ? "none" : "";
     host.querySelector("#coupon-applied").style.display = applied ? "" : "none";
@@ -162,11 +165,11 @@ export async function renderCheckout(root) {
       btn.textContent = t("checkout.apply");
     }
   };
-  host.querySelector("#coupon-btn").addEventListener("click", applyCoupon);
-  host.querySelector("#coupon").addEventListener("keydown", (e) => {
+  host.querySelector("#coupon-btn")?.addEventListener("click", applyCoupon);
+  host.querySelector("#coupon")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); applyCoupon(); }
   });
-  host.querySelector("#coupon-remove").addEventListener("click", () => {
+  host.querySelector("#coupon-remove")?.addEventListener("click", () => {
     couponCode = "";
     couponDiscount = 0;
     host.querySelector("#coupon").value = "";

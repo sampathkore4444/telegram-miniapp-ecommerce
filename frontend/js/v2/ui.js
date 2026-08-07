@@ -19,11 +19,24 @@ export function esc(str) {
 
 let storeCache = null;
 
+export function clearStoreCache() {
+  storeCache = null;
+}
+
 export async function getStore(force = false) {
   if (!storeCache || force) {
     storeCache = await api.get("/api/store", false);
   }
   return storeCache;
+}
+
+// Plan feature flags come from the public store payload (server-enforced).
+export function getPlan() {
+  return storeCache?.plan || "starter";
+}
+
+export function hasFeature(name) {
+  return Boolean(storeCache?.features?.[name]);
 }
 
 export function money(n, store = storeCache) {

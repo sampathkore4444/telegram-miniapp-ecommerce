@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentUser, DbDep
+from app.api.deps import ActiveStore, CurrentUser, DbDep
 from app.core.errors import AppError, NotFoundError
 from app.models import Product, ProductReview
 from app.schemas.review import ReviewCreate, ReviewPublic
@@ -23,9 +23,9 @@ def _to_public(r: ProductReview) -> ReviewPublic:
 
 
 @router.get("", response_model=dict)
-async def list_product_reviews(product_id: int, db: DbDep):
+async def list_product_reviews(product_id: int, db: DbDep, store: ActiveStore):
     product = await db.get(Product, product_id)
-    if product is None:
+    if product is None or product.store_id != store.id:
         raise NotFoundError("Product not found")
 
     base = select(ProductReview).where(
@@ -63,10 +63,10 @@ async def list_product_reviews(product_id: int, db: DbDep):
 
 @router.post("", response_model=dict)
 async def submit_review(
-    product_id: int, payload: ReviewCreate, user: CurrentUser, db: DbDep
+    product_id: int, payload: ReviewCreate, user: CurrentUser, db: DbDep, store: ActiveStore
 ):
     product = await db.get(Product, product_id)
-    if product is None or product.status != "active":
+    if product is None or product.status != "active" or product.store_id != store.id:
         raise NotFoundError("Product not found")
 
     result = await db.execute(
@@ -80,6 +80,7 @@ async def submit_review(
     review = ProductReview(
         user_id=user.id,
         product_id=product_id,
+        store_id=store.id,
         rating=payload.rating,
         comment=payload.comment,
         images=payload.images or [],

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 
-from app.api.deps import CurrentUser, DbDep, OptionalUser
+from app.api.deps import ActiveStore, CurrentUser, DbDep, OptionalUser
 from app.core.errors import AppError, NotFoundError
 from app.models import Category, Product, ProductVariant, RecentlyViewed, StockAlert
 from app.schemas.catalog import ProductCreate, ProductUpdate
@@ -18,6 +18,7 @@ class StockAlertRequest(BaseModel):
 @router.get("", response_model=Page[dict])
 async def list_products(
     db: DbDep,
+    store: ActiveStore,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     category: str | None = None,
@@ -25,9 +26,11 @@ async def list_products(
     featured: bool | None = None,
     sort: str = Query("newest", pattern="^(newest|price_asc|price_desc|popular)$"),
 ):
-    stmt = select(Product).where(Product.status == "active")
+    stmt = select(Product).where(Product.store_id == store.id, Product.status == "active")
     if category:
-        cat_result = await db.execute(select(Category).where(Category.slug == category))
+        cat_result = await db.execute(
+            select(Category).where(Category.slug == category, Category.store_id == store.id)
+        )
         cat = cat_result.scalar_one_or_none()
         if cat:
             stmt = stmt.where(Product.category_id == cat.id)
@@ -63,8 +66,10 @@ async def list_products(
 
 
 @router.get("/{product_id}", response_model=dict)
-async def get_product(product_id: int, db: DbDep, user: OptionalUser = None):
-    result = await db.execute(select(Product).where(Product.id == product_id))
+async def get_product(product_id: int, db: DbDep, store: ActiveStore, user: OptionalUser = None):
+    result = await db.execute(
+        select(Product).where(Product.id == product_id, Product.store_id == store.id)
+    )
     product = result.scalar_one_or_none()
     if product is None or product.status != "active":
         raise NotFoundError("Product not found")
@@ -79,7 +84,11 @@ async def get_product(product_id: int, db: DbDep, user: OptionalUser = None):
             )
         ).scalar_one_or_none()
         if existing is None:
-            db.add(RecentlyViewed(user_id=user.id, product_id=product.id))
+            db.add(
+                RecentlyViewed(
+                    user_id=user.id, product_id=product.id, store_id=store.id
+                )
+            )
         else:
             import datetime as dt
 
@@ -91,11 +100,15 @@ async def get_product(product_id: int, db: DbDep, user: OptionalUser = None):
 
 @router.post("/{product_id}/stock-alert", response_model=dict)
 async def create_stock_alert(
-    product_id: int, payload: StockAlertRequest, user: CurrentUser, db: DbDep
+    product_id: int,
+    payload: StockAlertRequest,
+    user: CurrentUser,
+    db: DbDep,
+    store: ActiveStore,
 ):
     """Subscribe to a back-in-stock notification for a product (or variant)."""
     product = await db.get(Product, product_id)
-    if product is None or product.status != "active":
+    if product is None or product.status != "active" or product.store_id != store.id:
         raise NotFoundError("Product not found")
 
     variant = None
@@ -121,6 +134,7 @@ async def create_stock_alert(
             StockAlert(
                 user_id=user.id,
                 product_id=product.id,
+                store_id=store.id,
                 variant_id=payload.variant_id,
             )
         )
@@ -129,10 +143,14 @@ async def create_stock_alert(
 
 
 @router.delete("/{product_id}/stock-alert", response_model=dict)
-async def delete_stock_alert(product_id: int, user: CurrentUser, db: DbDep):
+async def delete_stock_alert(
+    product_id: int, user: CurrentUser, db: DbDep, store: ActiveStore
+):
     result = await db.execute(
         select(StockAlert).where(
-            StockAlert.user_id == user.id, StockAlert.product_id == product_id
+            StockAlert.user_id == user.id,
+            StockAlert.product_id == product_id,
+            StockAlert.store_id == store.id,
         )
     )
     item = result.scalar_one_or_none()

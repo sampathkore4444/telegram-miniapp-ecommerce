@@ -1,6 +1,7 @@
 from sqlalchemy import Boolean, Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.plans import Plan
 from app.db.base import Base, IntPk, TimestampMixin, TgId
 from app.models.enums import UserRole
 
@@ -18,6 +19,12 @@ class User(Base, TimestampMixin):
         Enum(UserRole, native_enum=False, length=16),
         default=UserRole.BUYER,
         server_default=UserRole.BUYER.value,
+        index=True,
+    )
+    plan: Mapped[Plan] = mapped_column(
+        Enum(Plan, native_enum=False, length=16),
+        default=Plan.STARTER,
+        server_default=Plan.STARTER.value,
         index=True,
     )
     phone: Mapped[str | None] = mapped_column(String(32))

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.plans import Plan
 from app.models.enums import UserRole
 
 
@@ -19,6 +20,7 @@ class UserPublic(BaseModel):
     phone: str | None = None
     address: str | None = None
     role: UserRole
+    plan: Plan = Plan.STARTER
 
     @property
     def display_name(self) -> str:  # pragma: no cover - frontend derives its own

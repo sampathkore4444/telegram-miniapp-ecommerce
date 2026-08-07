@@ -1,5 +1,6 @@
 // Hash-based router for the SPA.
 import { t } from "./i18n.js";
+import { setStoreSlug, parseStoreHash } from "./store.js";
 
 const routes = new Map();
 let current = null;
@@ -14,10 +15,18 @@ export function routeTitle(spec) {
 }
 
 function parseHash() {
-  const hash = window.location.hash.replace(/^#\/?/, "");
-  const segments = hash
-    .split("/")
-    .filter((s) => Boolean(s) && !/^tgWebApp/.test(s));
+  const hash = window.location.hash;
+  const storePart = parseStoreHash(hash);
+  let segments;
+  if (storePart) {
+    setStoreSlug(storePart.slug);
+    segments = storePart.rest;
+  } else {
+    segments = hash
+      .replace(/^#\/?/, "")
+      .split("/")
+      .filter((s) => Boolean(s) && !/^tgWebApp/.test(s));
+  }
   return segments.length ? segments : ["home"];
 }
 

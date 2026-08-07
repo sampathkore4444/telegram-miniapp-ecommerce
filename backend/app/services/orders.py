@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.errors import AppError, NotFoundError
+from app.core.plans import feature_enabled
 from app.models import (
     CartItem,
     DiscountCode,
@@ -77,11 +78,18 @@ ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
 }
 
 
-async def get_store_settings(db: AsyncSession) -> StoreSettings:
-    result = await db.execute(select(StoreSettings).where(StoreSettings.id == 1))
+async def get_store_settings(db: AsyncSession, store_id: int | None = None) -> StoreSettings:
+    if store_id is None:
+        from app.services.stores import get_primary_store
+
+        store = await get_primary_store(db)
+        store_id = store.id
+    result = await db.execute(
+        select(StoreSettings).where(StoreSettings.store_id == store_id)
+    )
     settings_row = result.scalar_one_or_none()
     if settings_row is None:
-        settings_row = StoreSettings(id=1)
+        settings_row = StoreSettings(store_id=store_id)
         db.add(settings_row)
         await db.flush()
     return settings_row
@@ -91,10 +99,11 @@ async def compute_totals(
     db: AsyncSession,
     items: list[tuple[Product, ProductVariant | None, int]],
     coupon: DiscountCode | None = None,
+    store_id: int | None = None,
 ) -> tuple[Decimal, Decimal, Decimal, Decimal]:
     """Returns (subtotal, delivery_fee, discount, total). All from server-side prices."""
     subtotal = sum((line_subtotal(p, v, qty) for p, v, qty in items), Decimal("0"))
-    store = await get_store_settings(db)
+    store = await get_store_settings(db, store_id)
     delivery_fee = Decimal(str(store.delivery_fee or 0))
     threshold = store.free_delivery_threshold
     if threshold is not None and subtotal >= Decimal(str(threshold)):
@@ -117,12 +126,16 @@ async def validate_coupon(
     code: str,
     user: User,
     subtotal: Decimal | None = None,
+    store_id: int | None = None,
 ) -> DiscountCode:
     """Validate a coupon code for a user/order. Raises AppError with a stable code."""
     normalized = (code or "").strip().upper()
     if not normalized:
         raise AppError("Please enter a coupon code.", code="coupon_required")
-    result = await db.execute(select(DiscountCode).where(DiscountCode.code == normalized))
+    stmt = select(DiscountCode).where(DiscountCode.code == normalized)
+    if store_id is not None:
+        stmt = stmt.where(DiscountCode.store_id == store_id)
+    result = await db.execute(stmt)
     coupon = result.scalar_one_or_none()
     if coupon is None:
         raise AppError("Invalid coupon code.", code="coupon_not_found")
@@ -225,14 +238,30 @@ async def create_order(
     user: User,
     payload: CheckoutRequest,
     cart_items: list[CartItem],
+    store_id: int | None = None,
 ) -> Order:
-    store = await get_store_settings(db)
+    from app.models import Store
+
+    if store_id is None:
+        from app.services.stores import get_primary_store
+
+        store = await get_primary_store(db)
+        store_id = store.id
+    store = await get_store_settings(db, store_id)
+    from app.services.plans import get_store_plan
+
+    store_obj = await db.get(Store, store_id)
+    plan = await get_store_plan(db, store_obj)
     if payload.payment_method == PaymentMethod.BANK_QR and not store.bank_qr_enabled:
         raise AppError("Bank QR payments are currently disabled.", code="payment_disabled")
     if payload.payment_method == PaymentMethod.COD and not store.cod_enabled:
         raise AppError("Cash on delivery is currently disabled.", code="payment_disabled")
     if payload.payment_method == PaymentMethod.ONLINE and not store.online_payments_enabled:
         raise AppError("Online payments are currently disabled.", code="payment_disabled")
+    if payload.payment_method == PaymentMethod.ONLINE and not feature_enabled(plan, "online_payments"):
+        raise AppError(
+            "Online payments are not available on this store's plan.", code="plan_required"
+        )
 
     products: list[tuple[Product, ProductVariant | None, int]] = []
     for item in cart_items:
@@ -252,13 +281,22 @@ async def create_order(
     subtotal_raw = sum((line_subtotal(p, v, qty) for p, v, qty in products), Decimal("0"))
     coupon = None
     if payload.coupon_code:
-        coupon = await validate_coupon(db, payload.coupon_code, user, subtotal=subtotal_raw)
+        if not feature_enabled(plan, "coupons"):
+            raise AppError(
+                "Coupons are not enabled on this store's plan.", code="plan_required"
+            )
+        coupon = await validate_coupon(
+            db, payload.coupon_code, user, subtotal=subtotal_raw, store_id=store_id
+        )
 
-    subtotal, delivery_fee, discount, total = await compute_totals(db, products, coupon)
+    subtotal, delivery_fee, discount, total = await compute_totals(
+        db, products, coupon, store_id=store_id
+    )
     now = dt.datetime.now(dt.timezone.utc)
 
     order = Order(
         user_id=user.id,
+        store_id=store_id,
         status=(
             OrderStatus.PENDING
             if payload.payment_method == PaymentMethod.COD
@@ -317,13 +355,17 @@ async def create_order(
     return order
 
 
-async def get_order_or_404(db: AsyncSession, order_id: int, user: User | None = None) -> Order:
+async def get_order_or_404(
+    db: AsyncSession, order_id: int, user: User | None = None, store_id: int | None = None
+) -> Order:
     stmt = select(Order).options(
         selectinload(Order.items),
         selectinload(Order.status_logs),
     ).where(Order.id == order_id)
     if user is not None and not user.is_admin:
         stmt = stmt.where(Order.user_id == user.id)
+    if store_id is not None:
+        stmt = stmt.where(Order.store_id == store_id)
     result = await db.execute(stmt)
     order = result.scalar_one_or_none()
     if order is None:

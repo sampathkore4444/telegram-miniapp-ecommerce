@@ -25,6 +25,9 @@ class Order(Base, TimestampMixin):
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    store_id: Mapped[int] = mapped_column(
+        ForeignKey("stores.id", ondelete="RESTRICT"), index=True
+    )
     order_number: Mapped[str] = mapped_column(String(20), unique=True, index=True, default=gen_order_number)
     user_id: Mapped[TgId] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
     coupon_id: Mapped[int | None] = mapped_column(

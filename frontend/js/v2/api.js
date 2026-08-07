@@ -1,4 +1,6 @@
 // Thin fetch wrapper with auth, JSON handling and normalized errors.
+import { getStoreSlug } from "./store.js";
+
 export const TOKEN_KEY = "tgshop_token";
 export const USER_KEY = "tgshop_user";
 
@@ -39,6 +41,8 @@ async function request(path, options = {}) {
     const token = getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
+  const storeSlug = getStoreSlug();
+  if (storeSlug) headers["X-Store-Slug"] = storeSlug;
   if (body && !isForm) headers["Content-Type"] = "application/json";
 
   let resp;
@@ -71,6 +75,8 @@ export async function downloadFile(path, filename) {
   const headers = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  const storeSlug = getStoreSlug();
+  if (storeSlug) headers["X-Store-Slug"] = storeSlug;
   const resp = await fetch(path, { headers });
   if (resp.status === 401) {
     clearAuth();

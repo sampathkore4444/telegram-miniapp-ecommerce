@@ -1,9 +1,11 @@
 import { api } from "../../api.js";
-import { el, esc, toast } from "../../ui.js";
+import { el, esc, toast, getStore } from "../../ui.js";
 
 export async function renderSettings(root) {
   root.innerHTML = `<div class="container"><div class="skeleton" style="height:240px"></div></div>`;
+  const store = await getStore();
   const s = await api.get("/api/admin/settings");
+  const onlinePay = Boolean(store.features?.online_payments);
 
   const host = el(`
     <div class="container">
@@ -50,8 +52,8 @@ export async function renderSettings(root) {
           <span>Accept <b>Cash on Delivery</b></span>
         </label>
         <label class="row" style="cursor:pointer;justify-content:flex-start;gap:10px;margin-bottom:14px">
-          <input type="checkbox" id="online-en" ${s.online_payments_enabled ? "checked" : ""} />
-          <span>Accept <b>Online payments</b></span>
+          <input type="checkbox" id="online-en" ${onlinePay && s.online_payments_enabled ? "checked" : ""} ${onlinePay ? "" : "disabled"} />
+          <span>Accept <b>Online payments</b>${onlinePay ? "" : `<span class="small muted"> — available on Growth+</span>`}</span>
         </label>
         <div class="field"><label>Bank name</label><input class="input" id="bname" value="${esc(s.bank_name || "")}" /></div>
         <div class="field"><label>Account holder name</label><input class="input" id="bholder" value="${esc(s.bank_account_name || "")}" /></div>
@@ -105,7 +107,7 @@ export async function renderSettings(root) {
       low_stock_threshold: Number(val("#low-stock") || 0),
       bank_qr_enabled: host.querySelector("#qr-en").checked,
       cod_enabled: host.querySelector("#cod-en").checked,
-      online_payments_enabled: host.querySelector("#online-en").checked,
+      online_payments_enabled: onlinePay ? host.querySelector("#online-en").checked : false,
       bank_name: val("#bname") || null,
       bank_account_name: val("#bholder") || null,
       bank_account_number: val("#bacc") || null,

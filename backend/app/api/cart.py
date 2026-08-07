@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import delete, select
 
-from app.api.deps import CurrentUser, DbDep
+from app.api.deps import ActiveStore, CurrentUser, DbDep
 from app.core.errors import AppError, NotFoundError
 from app.models import CartItem, Product, ProductVariant
 from app.schemas.cart import CartAdd, CartItemPublic, CartPublic, CartUpdate
@@ -10,10 +10,10 @@ from app.services.pricing import unit_price_for
 router = APIRouter(prefix="/cart", tags=["cart"])
 
 
-async def _build_cart(db: DbDep, user_id: int) -> CartPublic:
+async def _build_cart(db: DbDep, user_id: int, store_id: int) -> CartPublic:
     result = await db.execute(
         select(CartItem)
-        .where(CartItem.user_id == user_id)
+        .where(CartItem.user_id == user_id, CartItem.store_id == store_id)
         .order_by(CartItem.created_at.desc())
     )
     items = result.scalars().all()
@@ -49,14 +49,14 @@ def _label(variant: ProductVariant | None, product: Product) -> str:
 
 
 @router.get("", response_model=CartPublic)
-async def get_cart(user: CurrentUser, db: DbDep):
-    return await _build_cart(db, user.id)
+async def get_cart(user: CurrentUser, db: DbDep, store: ActiveStore):
+    return await _build_cart(db, user.id, store.id)
 
 
 @router.post("/add", response_model=CartPublic)
-async def add_to_cart(payload: CartAdd, user: CurrentUser, db: DbDep):
+async def add_to_cart(payload: CartAdd, user: CurrentUser, db: DbDep, store: ActiveStore):
     product = await db.get(Product, payload.product_id)
-    if product is None or product.status.value != "active":
+    if product is None or product.status.value != "active" or product.store_id != store.id:
         raise NotFoundError("Product not found")
     variant = await _resolve_variant(db, product, payload.variant_id)
     available = _available(variant, product)
@@ -71,6 +71,7 @@ async def add_to_cart(payload: CartAdd, user: CurrentUser, db: DbDep):
             CartItem.user_id == user.id,
             CartItem.product_id == payload.product_id,
             CartItem.variant_id == payload.variant_id,
+            CartItem.store_id == store.id,
         )
     )
     item = result.scalar_one_or_none()
@@ -86,19 +87,24 @@ async def add_to_cart(payload: CartAdd, user: CurrentUser, db: DbDep):
         db.add(
             CartItem(
                 user_id=user.id,
+                store_id=store.id,
                 product_id=payload.product_id,
                 variant_id=payload.variant_id,
                 quantity=payload.quantity,
             )
         )
     await db.commit()
-    return await _build_cart(db, user.id)
+    return await _build_cart(db, user.id, store.id)
 
 
 @router.patch("/{item_id}", response_model=CartPublic)
-async def update_cart_item(item_id: int, payload: CartUpdate, user: CurrentUser, db: DbDep):
+async def update_cart_item(
+    item_id: int, payload: CartUpdate, user: CurrentUser, db: DbDep, store: ActiveStore
+):
     result = await db.execute(
-        select(CartItem).where(CartItem.id == item_id, CartItem.user_id == user.id)
+        select(CartItem).where(
+            CartItem.id == item_id, CartItem.user_id == user.id, CartItem.store_id == store.id
+        )
     )
     item = result.scalar_one_or_none()
     if item is None:
@@ -116,24 +122,28 @@ async def update_cart_item(item_id: int, payload: CartUpdate, user: CurrentUser,
         item.quantity = payload.quantity
         item.reminder_sent_at = None
     await db.commit()
-    return await _build_cart(db, user.id)
+    return await _build_cart(db, user.id, store.id)
 
 
 @router.delete("/{item_id}", response_model=CartPublic)
-async def remove_cart_item(item_id: int, user: CurrentUser, db: DbDep):
+async def remove_cart_item(item_id: int, user: CurrentUser, db: DbDep, store: ActiveStore):
     result = await db.execute(
-        select(CartItem).where(CartItem.id == item_id, CartItem.user_id == user.id)
+        select(CartItem).where(
+            CartItem.id == item_id, CartItem.user_id == user.id, CartItem.store_id == store.id
+        )
     )
     item = result.scalar_one_or_none()
     if item is None:
         raise NotFoundError("Cart item not found")
     await db.delete(item)
     await db.commit()
-    return await _build_cart(db, user.id)
+    return await _build_cart(db, user.id, store.id)
 
 
 @router.delete("", response_model=CartPublic)
-async def clear_cart(user: CurrentUser, db: DbDep):
-    await db.execute(delete(CartItem).where(CartItem.user_id == user.id))
+async def clear_cart(user: CurrentUser, db: DbDep, store: ActiveStore):
+    await db.execute(
+        delete(CartItem).where(CartItem.user_id == user.id, CartItem.store_id == store.id)
+    )
     await db.commit()
-    return await _build_cart(db, user.id)
+    return await _build_cart(db, user.id, store.id)

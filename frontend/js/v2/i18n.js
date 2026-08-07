@@ -102,6 +102,7 @@ const DICTS = {
     "ui.saved": "Saved",
     "ui.submit": "Submit",
     "ui.view_order": "View order",
+    "ui.store": "Store",
 
     "nav.home": "Home",
     "nav.cart": "Cart",
@@ -415,6 +416,7 @@ const DICTS = {
     "ui.saved": "Tersimpan",
     "ui.submit": "Kirim",
     "ui.view_order": "Lihat pesanan",
+    "ui.store": "Toko",
 
     "nav.home": "Beranda",
     "nav.cart": "Keranjang",
@@ -728,6 +730,7 @@ const DICTS = {
     "ui.saved": "Đã lưu",
     "ui.submit": "Gửi",
     "ui.view_order": "Xem đơn hàng",
+    "ui.store": "Cửa hàng",
 
     "nav.home": "Trang chủ",
     "nav.cart": "Giỏ hàng",
@@ -1041,6 +1044,7 @@ const DICTS = {
     "ui.saved": "Salvo",
     "ui.submit": "Enviar",
     "ui.view_order": "Ver pedido",
+    "ui.store": "Loja",
 
     "nav.home": "Início",
     "nav.cart": "Carrinho",

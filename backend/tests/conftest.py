@@ -69,8 +69,10 @@ async def client(prepare_db):
     app.dependency_overrides.clear()
 
 
-async def login(client, role: str = "buyer") -> dict:
-    resp = await client.post(f"/api/auth/demo?role={role}")
+async def login(client, role: str = "buyer", plan: str | None = None) -> dict:
+    if plan is None:
+        plan = "pro" if role == "admin" else "starter"
+    resp = await client.post(f"/api/auth/demo?role={role}&plan={plan}")
     assert resp.status_code == 200, resp.text
     return resp.json()["token"]
 

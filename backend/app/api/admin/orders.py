@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentAdmin, DbDep
+from app.api.deps import AdminStore, DbDep
 from app.api.orders import order_to_public
 from app.core.errors import AppError, NotFoundError
 from app.models import Order, OrderStatus, PaymentMethod, User
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/admin/orders", tags=["admin"])
 @router.get("", response_model=dict)
 async def admin_list_orders(
     db: DbDep,
-    admin: CurrentAdmin,
+    store: AdminStore,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: OrderStatus | None = None,
@@ -31,8 +31,8 @@ async def admin_list_orders(
     search: str | None = None,
     order_number: str | None = None,
 ):
-    stmt = select(Order)
-    count_stmt = select(func.count(Order.id))
+    stmt = select(Order).where(Order.store_id == store.id)
+    count_stmt = select(func.count(Order.id)).where(Order.store_id == store.id)
     if status:
         stmt = stmt.where(Order.status == status)
         count_stmt = count_stmt.where(Order.status == status)
@@ -92,12 +92,14 @@ ORDERS_CSV_HEADERS = [
 
 
 @router.get("/export", response_model=None)
-async def admin_export_orders(db: DbDep, admin: CurrentAdmin):
+async def admin_export_orders(db: DbDep, store: AdminStore):
     """Download every order as CSV."""
     import csv
     import io
 
-    result = await db.execute(select(Order).order_by(Order.id))
+    result = await db.execute(
+        select(Order).where(Order.store_id == store.id).order_by(Order.id)
+    )
     orders = result.scalars().all()
 
     buffer = io.StringIO()
@@ -134,8 +136,8 @@ async def admin_export_orders(db: DbDep, admin: CurrentAdmin):
 
 
 @router.get("/{order_id}", response_model=dict)
-async def admin_get_order(order_id: int, db: DbDep, admin: CurrentAdmin):
-    order = await get_order_or_404(db, order_id)
+async def admin_get_order(order_id: int, db: DbDep, store: AdminStore):
+    order = await get_order_or_404(db, order_id, store_id=store.id)
     d = order_to_public(order).model_dump()
     user = await db.get(User, order.user_id)
     d["customer"] = (
@@ -148,25 +150,25 @@ async def admin_get_order(order_id: int, db: DbDep, admin: CurrentAdmin):
 
 @router.patch("/{order_id}/status", response_model=dict)
 async def admin_update_order_status(
-    order_id: int, payload: OrderStatusUpdate, db: DbDep, admin: CurrentAdmin
+    order_id: int, payload: OrderStatusUpdate, db: DbDep, store: AdminStore
 ):
-    order = await get_order_or_404(db, order_id)
+    order = await get_order_or_404(db, order_id, store_id=store.id)
     if order.status == payload.status:
         raise AppError("Order is already in this status.", code="same_status")
 
-    order = await change_order_status(db, order, payload.status, admin.id, payload.note)
+    order = await change_order_status(db, order, payload.status, store.owner_id, payload.note)
     if order.payment_status.value == "paid" and order.paid_at is None:
         import datetime as dt
 
         order.paid_at = dt.datetime.now(dt.timezone.utc)
     await db.commit()
 
-    store = await get_store_settings(db)
+    store_settings = await get_store_settings(db, store.id)
     user = await db.get(User, order.user_id)
     if user:
-        await notify_buyer_order_update(order, user, store)
+        await notify_buyer_order_update(order, user, store_settings)
 
-    refreshed = await get_order_or_404(db, order_id)
+    refreshed = await get_order_or_404(db, order_id, store_id=store.id)
     d = order_to_public(refreshed).model_dump()
     d["customer"] = (
         {"telegram_id": user.telegram_id, "display_name": user.display_name} if user else None
@@ -176,23 +178,23 @@ async def admin_update_order_status(
 
 @router.patch("/{order_id}/tracking", response_model=dict)
 async def admin_set_tracking(
-    order_id: int, payload: TrackingUpdate, db: DbDep, admin: CurrentAdmin
+    order_id: int, payload: TrackingUpdate, db: DbDep, store: AdminStore
 ):
     """Attach a courier + tracking number to an order."""
-    order = await get_order_or_404(db, order_id)
+    order = await get_order_or_404(db, order_id, store_id=store.id)
     data = payload.model_dump(exclude_unset=True)
     order.tracking_number = data.get("tracking_number")
     order.tracking_carrier = data.get("tracking_carrier")
     await db.commit()
 
-    store = await get_store_settings(db)
+    store_settings = await get_store_settings(db, store.id)
     user = await db.get(User, order.user_id)
     if user and order.tracking_number:
         try:
             await notify_buyer_order_update(
                 order,
                 user,
-                store,
+                store_settings,
                 message=(
                     f"Your order {order.order_number} is on the way!\n"
                     f"Carrier: {order.tracking_carrier or 'Courier'}\n"
@@ -202,7 +204,7 @@ async def admin_set_tracking(
         except Exception:  # notifications are best-effort
             pass
 
-    refreshed = await get_order_or_404(db, order_id)
+    refreshed = await get_order_or_404(db, order_id, store_id=store.id)
     d = order_to_public(refreshed).model_dump()
     d["customer"] = (
         {"telegram_id": user.telegram_id, "display_name": user.display_name} if user else None
@@ -212,18 +214,18 @@ async def admin_set_tracking(
 
 @router.post("/{order_id}/refund", response_model=dict)
 async def admin_refund_order(
-    order_id: int, payload: RefundRequest, db: DbDep, admin: CurrentAdmin
+    order_id: int, payload: RefundRequest, db: DbDep, store: AdminStore
 ):
-    order = await get_order_or_404(db, order_id)
-    order = await refund_order(db, order, Decimal(str(payload.amount)), payload.reason, admin.id)
+    order = await get_order_or_404(db, order_id, store_id=store.id)
+    order = await refund_order(db, order, Decimal(str(payload.amount)), payload.reason, store.owner_id)
     await db.commit()
 
-    store = await get_store_settings(db)
+    store_settings = await get_store_settings(db, store.id)
     user = await db.get(User, order.user_id)
     if user:
-        await notify_buyer_order_update(order, user, store)
+        await notify_buyer_order_update(order, user, store_settings)
 
-    refreshed = await get_order_or_404(db, order_id)
+    refreshed = await get_order_or_404(db, order_id, store_id=store.id)
     d = order_to_public(refreshed).model_dump()
     d["customer"] = (
         {"telegram_id": user.telegram_id, "display_name": user.display_name} if user else None

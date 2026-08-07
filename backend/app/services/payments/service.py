@@ -38,7 +38,7 @@ async def init_payment(db: AsyncSession, order: Order, user: User) -> PayResult:
             "This order is not awaiting payment.", code="invalid_order_state"
         )
 
-    store = await get_store_settings(db)
+    store = await get_store_settings(db, order.store_id)
     existing = await _pending_transaction(db, order)
     if existing is not None:
         return PayResult(
@@ -96,7 +96,7 @@ async def settle_payment(
             "This order is not awaiting payment.", code="invalid_order_state"
         )
 
-    store = await get_store_settings(db)
+    store = await get_store_settings(db, order.store_id)
     gateway = get_gateway(tx.gateway)
     success, message = await gateway.confirm_intent(order, store, tx.provider_ref, approved)
 

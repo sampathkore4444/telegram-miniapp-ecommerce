@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentAdmin, DbDep
+from app.api.deps import AdminStore, DbDep
 from app.core.errors import ConflictError, NotFoundError
 from app.models import Category, Product
 from app.schemas.catalog import CategoryCreate, CategoryPublic, CategoryUpdate
@@ -29,12 +29,16 @@ def _public(cat: Category, count: int = 0) -> CategoryPublic:
     )
 
 
-async def _unique_slug(db: DbDep, name: str, exclude_id: int | None = None) -> str:
+async def _unique_slug(
+    db: DbDep, name: str, store_id: int, exclude_id: int | None = None
+) -> str:
     base = _slugify(name)
     candidate = base
     counter = 1
     while True:
-        stmt = select(Category).where(Category.slug == candidate)
+        stmt = select(Category).where(
+            Category.slug == candidate, Category.store_id == store_id
+        )
         if exclude_id:
             stmt = stmt.where(Category.id != exclude_id)
         result = await db.execute(stmt)
@@ -45,10 +49,11 @@ async def _unique_slug(db: DbDep, name: str, exclude_id: int | None = None) -> s
 
 
 @router.get("", response_model=list[CategoryPublic])
-async def admin_list_categories(db: DbDep, admin: CurrentAdmin):
+async def admin_list_categories(db: DbDep, store: AdminStore):
     stmt = (
         select(Category, func.count(Product.id).label("cnt"))
         .outerjoin(Product, Product.category_id == Category.id)
+        .where(Category.store_id == store.id)
         .group_by(Category.id)
         .order_by(Category.sort_order, Category.name)
     )
@@ -57,9 +62,11 @@ async def admin_list_categories(db: DbDep, admin: CurrentAdmin):
 
 
 @router.post("", response_model=CategoryPublic)
-async def admin_create_category(payload: CategoryCreate, db: DbDep, admin: CurrentAdmin):
-    slug = payload.slug or await _unique_slug(db, payload.name)
-    cat = Category(**payload.model_dump(exclude={"slug"}), slug=slug)
+async def admin_create_category(payload: CategoryCreate, db: DbDep, store: AdminStore):
+    slug = payload.slug or await _unique_slug(db, payload.name, store.id)
+    cat = Category(
+        **payload.model_dump(exclude={"slug"}), slug=slug, store_id=store.id
+    )
     db.add(cat)
     try:
         await db.commit()
@@ -72,15 +79,15 @@ async def admin_create_category(payload: CategoryCreate, db: DbDep, admin: Curre
 
 @router.patch("/{category_id}", response_model=CategoryPublic)
 async def admin_update_category(
-    category_id: int, payload: CategoryUpdate, db: DbDep, admin: CurrentAdmin
+    category_id: int, payload: CategoryUpdate, db: DbDep, store: AdminStore
 ):
     cat = await db.get(Category, category_id)
-    if cat is None:
+    if cat is None or cat.store_id != store.id:
         raise NotFoundError("Category not found")
     data = payload.model_dump(exclude_unset=True)
     slug = data.pop("slug", None)
     if slug is None and data.get("name"):
-        slug = await _unique_slug(db, data["name"], exclude_id=cat.id)
+        slug = await _unique_slug(db, data["name"], store.id, exclude_id=cat.id)
     if slug:
         data["slug"] = slug
     for key, value in data.items():
@@ -94,9 +101,9 @@ async def admin_update_category(
 
 
 @router.delete("/{category_id}", status_code=204)
-async def admin_delete_category(category_id: int, db: DbDep, admin: CurrentAdmin):
+async def admin_delete_category(category_id: int, db: DbDep, store: AdminStore):
     cat = await db.get(Category, category_id)
-    if cat is None:
+    if cat is None or cat.store_id != store.id:
         raise NotFoundError("Category not found")
     await db.delete(cat)
     await db.commit()

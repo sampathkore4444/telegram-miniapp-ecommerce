@@ -111,6 +111,7 @@
       name: form.querySelector("#s-name").value.trim(),
       email: form.querySelector("#s-email").value.trim(),
       market: form.querySelector("#s-market").value,
+      plan: form.querySelector("#s-plan")?.value || "starter",
       telegram: form.querySelector("#s-telegram").value.trim(),
     });
 
@@ -132,6 +133,7 @@
         name: f.name,
         email: f.email,
         market: f.market,
+        plan: f.plan,
         telegram: f.telegram,
         language: current,
         _subject: `[ShopTrolley] New signup: ${f.storeName} (${f.market})`,

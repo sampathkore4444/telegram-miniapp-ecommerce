@@ -1,15 +1,18 @@
-from sqlalchemy import Boolean, Integer, Numeric, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IntPk, TimestampMixin
 
 
 class StoreSettings(Base, TimestampMixin):
-    """Singleton (id always 1) holding store-wide configuration."""
+    """One row of store-wide configuration per store."""
 
     __tablename__ = "store_settings"
 
     id: Mapped[IntPk]
+    store_id: Mapped[int] = mapped_column(
+        ForeignKey("stores.id", ondelete="RESTRICT"), unique=True, index=True
+    )
 
     store_name: Mapped[str] = mapped_column(String(120), default="My Telegram Shop")
     store_description: Mapped[str | None] = mapped_column(Text)
@@ -42,6 +45,8 @@ class StoreSettings(Base, TimestampMixin):
     bank_account_number: Mapped[str | None] = mapped_column(String(64))
     bank_qr_image: Mapped[str | None] = mapped_column(String(512))
     payment_instructions: Mapped[str | None] = mapped_column(Text)
+
+    store: Mapped["Store"] = relationship(back_populates="settings", lazy="joined")
 
     def to_dict(self) -> dict:
         return {
