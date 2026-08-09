@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Form, Query, UploadFile
 
 from app.api.deps import ActiveStore, CurrentUser, DbDep
+from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.models import CANCELLABLE_STATUSES, CartItem, Order, OrderStatus, PaymentMethod, PaymentStatus
 from app.schemas.cart import CartPublic
@@ -180,7 +181,13 @@ async def pay_online(order_id: int, user: CurrentUser, db: DbDep):
 
 @router.post("/{order_id}/pay/simulate", response_model=dict)
 async def simulate_payment(order_id: int, payload: SimulateRequest, user: CurrentUser, db: DbDep):
-    """Resolve a pending intent. Only the sandbox gateway uses this endpoint."""
+    """Resolve a pending intent. Only the sandbox gateway uses this endpoint,
+    and only in a development/test environment."""
+    if not settings.demo_features_enabled:
+        raise AppError(
+            "Payment simulation is only available in development.",
+            code="simulation_disabled",
+        )
     order = await _get_my_order(db, order_id, user)
     if order.payment_method != PaymentMethod.ONLINE:
         raise AppError(

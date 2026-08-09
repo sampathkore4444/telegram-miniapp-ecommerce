@@ -4,7 +4,7 @@ from sqlalchemy import select
 from app.api.deps import AdminStore, DbDep
 from app.core.config import settings
 from app.core.telegram import send_telegram_message
-from app.models import User, UserRole
+from app.models import Order, User, UserRole
 from app.schemas.broadcast import BroadcastRequest
 
 router = APIRouter(prefix="/admin/broadcasts", tags=["admin"])
@@ -12,16 +12,21 @@ router = APIRouter(prefix="/admin/broadcasts", tags=["admin"])
 
 @router.post("", response_model=dict)
 async def send_broadcast(payload: BroadcastRequest, db: DbDep, store: AdminStore):
-    """Send a Telegram message to every active buyer of this store. Best-effort."""
+    """Send a Telegram message to every buyer who has ordered from this store.
+    Best-effort. Recipients are scoped to the store's own customers."""
     text = payload.message.strip()
     if not text:
         return {"sent": 0, "total": 0}
 
+    customer_ids = (
+        select(Order.user_id).where(Order.store_id == store.id).distinct()
+    )
     result = await db.execute(
         select(User).where(
             User.role == UserRole.BUYER,
             User.is_active.is_(True),
             User.telegram_id.isnot(None),
+            User.id.in_(customer_ids),
         )
     )
     buyers = result.scalars().all()

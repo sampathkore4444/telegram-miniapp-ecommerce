@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
 from app.api.deps import DbDep, rate_limit
 from app.core.config import settings
@@ -10,6 +10,20 @@ from app.models import User, UserRole
 from app.schemas.user import AuthResponse, TelegramLoginRequest, UserPublic
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _demo_login_allowed_for(host: str) -> bool:
+    """Demo login is a development/test convenience and must never run in a
+    deployed instance. ``APP_ENV=development`` deployments are still blocked
+    unless DEBUG is enabled or the caller is on the loopback interface."""
+    if settings.demo_features_enabled:
+        return True
+    host = (host or "").strip().lower()
+    return host in {"localhost", "127.0.0.1", "::1"}
+
+
+def _demo_login_allowed(request: Request) -> bool:
+    return _demo_login_allowed_for(request.client.host if request.client else "")
 
 
 async def _upsert_user(db: DbDep, telegram_id: int, data: dict) -> User:
@@ -58,9 +72,9 @@ async def telegram_login(payload: TelegramLoginRequest, db: DbDep):
 
 
 @router.post("/demo", response_model=AuthResponse, dependencies=[Depends(rate_limit(20))])
-async def demo_login(db: DbDep, role: str = "buyer", plan: str = "starter"):
+async def demo_login(request: Request, db: DbDep, role: str = "buyer", plan: str = "starter"):
     """Development-only login used to test the app outside Telegram."""
-    if not settings.is_dev:
+    if not settings.is_dev or not _demo_login_allowed(request):
         raise AppError("Demo login is disabled outside development.", code="demo_disabled")
 
     if role == "admin":

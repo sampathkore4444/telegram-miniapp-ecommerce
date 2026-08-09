@@ -60,7 +60,7 @@ export async function renderCart(root) {
     itemsEl.innerHTML = "";
     for (const item of cart.items) {
       const p = item.product;
-      const img = p.images && p.images.length ? `<img src="${esc(p.images[0])}" alt="" onerror="this.remove()">` : `<span style="font-size:26px">&#128230;</span>`;
+      const img = p.images && p.images.length ? `<img src="${esc(p.images[0])}" alt="" data-err="remove">` : `<span style="font-size:26px">&#128230;</span>`;
       const row = el(`
         <div class="card" data-id="${item.id}" style="padding:12px">
           <div class="row">

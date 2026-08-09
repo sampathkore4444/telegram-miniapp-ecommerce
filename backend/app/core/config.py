@@ -54,6 +54,13 @@ class Settings(BaseSettings):
         return self.APP_ENV.lower() in {"development", "dev", "test"} or self.DEBUG
 
     @property
+    def demo_features_enabled(self) -> bool:
+        """Explicit dev/test-only conveniences (demo login, sandbox payment
+        simulation). A deployed ``APP_ENV=development`` instance with DEBUG off
+        is treated as production and gets none of them."""
+        return self.APP_ENV.lower() in {"dev", "test"} or self.DEBUG
+
+    @property
     def admin_ids(self) -> list[int]:
         return [
             int(x)

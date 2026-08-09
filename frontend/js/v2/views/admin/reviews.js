@@ -41,7 +41,7 @@ export async function renderReviews(root) {
               </div>
               <div class="small">${STARS(r.rating)} <span class="muted">· ${esc(r.user_name)} · ${esc(r.created_at || "")}</span></div>
               ${r.comment ? `<p class="muted" style="font-size:14px;margin-top:6px;white-space:pre-wrap">${esc(r.comment)}</p>` : ""}
-              ${r.images && r.images.length ? `<div class="row" style="margin-top:6px;gap:6px">${r.images.slice(0, 4).map((src) => `<img src="${esc(src)}" style="width:52px;height:52px;border-radius:8px;object-fit:cover" onerror="this.remove()">`).join("")}</div>` : ""}
+              ${r.images && r.images.length ? `<div class="row" style="margin-top:6px;gap:6px">${r.images.slice(0, 4).map((src) => `<img src="${esc(src)}" style="width:52px;height:52px;border-radius:8px;object-fit:cover" data-err="remove">`).join("")}</div>` : ""}
             </div>
             <div class="btn-row" style="margin:0;align-self:flex-start">
               <button class="btn btn-sm btn-outline" data-toggle>${r.is_approved ? "Hide" : "Approve"}</button>

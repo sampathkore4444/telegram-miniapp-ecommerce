@@ -18,6 +18,22 @@ export function esc(str) {
     .replace(/'/g, "&#39;");
 }
 
+// The <img> error event does not bubble, but it does propagate in the capture
+// phase. We use a single capture listener so no inline onerror handlers are
+// needed (a strict Content-Security-Policy blocks those anyway).
+document.addEventListener(
+  "error",
+  (e) => {
+    if (e.target && e.target.tagName === "IMG") {
+      const mode = e.target.dataset.err;
+      if (mode === "hide") e.target.style.display = "none";
+      else if (mode === "parent") e.target.closest(".thumb")?.remove();
+      else if (mode === "remove") e.target.remove();
+    }
+  },
+  true,
+);
+
 let storeCache = null;
 
 export function clearStoreCache() {
@@ -68,7 +84,7 @@ export function statusBadge(status) {
 
 export function productCard(p, store) {
   const img = p.images && p.images.length
-    ? `<img loading="lazy" src="${esc(p.images[0])}" alt="${esc(p.name)}" onerror="this.style.display='none'">`
+    ? `<img loading="lazy" src="${esc(p.images[0])}" alt="${esc(p.name)}" data-err="hide">`
     : `<span class="ph">&#128230;</span>`;
   const featured = p.is_featured ? `<span class="tag tag-featured" style="position:absolute;top:8px;right:8px;z-index:2">${esc(t("ui.featured"))}</span>` : "";
   const onSale = p.compare_at_price && p.compare_at_price > p.price;

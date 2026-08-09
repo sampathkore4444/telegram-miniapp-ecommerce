@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 
 from app.api.deps import AdminStore, DbDep
 from app.api.orders import order_to_public
+from app.core.csv import csv_cell
 from app.core.errors import AppError, NotFoundError
 from app.models import Order, OrderStatus, PaymentMethod, User
 from app.schemas.order import OrderStatusUpdate, RefundRequest, TrackingUpdate
@@ -109,21 +110,21 @@ async def admin_export_orders(db: DbDep, store: AdminStore):
         user = await db.get(User, o.user_id)
         writer.writerow(
             {
-                "order_number": o.order_number,
+                "order_number": csv_cell(o.order_number),
                 "status": o.status.value if o.status else "",
                 "payment_method": o.payment_method.value if o.payment_method else "",
                 "payment_status": o.payment_status.value if o.payment_status else "",
-                "customer": user.display_name if user else "",
-                "recipient_name": o.recipient_name,
-                "recipient_phone": o.recipient_phone,
-                "delivery_address": o.delivery_address,
+                "customer": csv_cell(user.display_name if user else ""),
+                "recipient_name": csv_cell(o.recipient_name),
+                "recipient_phone": csv_cell(o.recipient_phone),
+                "delivery_address": csv_cell(o.delivery_address),
                 "subtotal": float(o.subtotal),
                 "delivery_fee": float(o.delivery_fee),
                 "discount": float(o.discount),
                 "total": float(o.total),
-                "coupon_code": o.coupon_code or "",
-                "tracking_number": o.tracking_number or "",
-                "tracking_carrier": o.tracking_carrier or "",
+                "coupon_code": csv_cell(o.coupon_code or ""),
+                "tracking_number": csv_cell(o.tracking_number or ""),
+                "tracking_carrier": csv_cell(o.tracking_carrier or ""),
                 "created_at": o.created_at.isoformat() if o.created_at else "",
             }
         )

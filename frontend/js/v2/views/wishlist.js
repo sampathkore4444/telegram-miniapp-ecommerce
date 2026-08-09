@@ -25,7 +25,7 @@ export async function renderWishlist(root) {
       const p = item.product;
       if (!p) continue;
       const img = p.images && p.images.length
-        ? `<img loading="lazy" src="${esc(p.images[0])}" onerror="this.style.display='none'">`
+        ? `<img loading="lazy" src="${esc(p.images[0])}" data-err="hide">`
         : `<span class="ph">&#128230;</span>`;
       const row = el(`
         <div class="card" data-nav style="cursor:pointer">

@@ -120,7 +120,7 @@ export async function renderProductEditor(root, params) {
     product.images.forEach((url, idx) => {
       const t = el(`
         <div class="thumb">
-          <img src="${esc(url)}" onerror="this.closest('.thumb').remove()" />
+          <img src="${esc(url)}" data-err="parent" />
           <button class="x" data-idx="${idx}">×</button>
         </div>`);
       t.querySelector(".x").addEventListener("click", () => {

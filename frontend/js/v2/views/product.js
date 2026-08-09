@@ -27,7 +27,7 @@ export async function renderProduct(root, params) {
   const availableStock = () => (variants.length ? (selectedVariant ? selectedVariant.stock : 0) : product.stock);
 
   const thumbs = images.length > 1
-    ? `<div class="gallery-thumbs">${images.map((src, i) => `<button class="gthumb ${i === 0 ? "active" : ""}" data-i="${i}"><img src="${esc(src)}" alt="" onerror="this.remove()"></button>`).join("")}</div>`
+    ? `<div class="gallery-thumbs">${images.map((src, i) => `<button class="gthumb ${i === 0 ? "active" : ""}" data-i="${i}"><img src="${esc(src)}" alt="" data-err="remove"></button>`).join("")}</div>`
     : "";
 
   let wishlisted = false;
@@ -91,7 +91,7 @@ export async function renderProduct(root, params) {
             </div>
             <div class="small" style="margin-top:4px">${starRow(r.rating)}</div>
             ${r.comment ? `<p class="muted" style="font-size:14px;margin-top:6px;white-space:pre-wrap">${esc(r.comment)}</p>` : ""}
-            ${r.images && r.images.length ? `<div class="row" style="margin-top:6px;gap:6px">${r.images.slice(0, 4).map((src) => `<img src="${esc(src)}" style="width:52px;height:52px;border-radius:8px;object-fit:cover" onerror="this.remove()">`).join("")}</div>` : ""}
+            ${r.images && r.images.length ? `<div class="row" style="margin-top:6px;gap:6px">${r.images.slice(0, 4).map((src) => `<img src="${esc(src)}" style="width:52px;height:52px;border-radius:8px;object-fit:cover" data-err="remove">`).join("")}</div>` : ""}
           </div>`).join("")}` : `
         <p class="muted small" style="margin-top:10px">${t("product.no_reviews")}</p>`}
       </div>

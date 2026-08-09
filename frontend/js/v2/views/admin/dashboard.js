@@ -87,7 +87,7 @@ export async function renderDashboard(root) {
       <div class="card">
         ${data.top_products.length === 0 ? '<div class="muted small">No sales yet</div>' : data.top_products.map((p) => `
           <div class="row" style="margin-bottom:8px">
-            ${p.image_url ? `<img src="${esc(p.image_url)}" style="width:40px;height:40px;border-radius:8px;object-fit:cover" onerror="this.remove()">` : ""}
+            ${p.image_url ? `<img src="${esc(p.image_url)}" style="width:40px;height:40px;border-radius:8px;object-fit:cover" data-err="remove">` : ""}
             <span class="grow" style="font-size:14px;font-weight:600">${esc(p.name)}</span>
             <span class="small muted">${p.quantity} sold</span>
           </div>`).join("")}

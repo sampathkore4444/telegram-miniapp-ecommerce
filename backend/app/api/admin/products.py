@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import AdminStore, DbDep
+from app.core.csv import csv_cell
 from app.core.errors import ConflictError, NotFoundError, PermissionError
 from app.core.plans import ensure_quota, plan_limit
 from app.models import Category, Product, ProductVariant
@@ -160,7 +161,7 @@ def _csv_value(value) -> str:
         return ""
     if isinstance(value, bool):
         return "1" if value else "0"
-    return str(value)
+    return csv_cell(value)
 
 
 @router.get("/export", response_model=None)
@@ -180,10 +181,10 @@ async def admin_export_products(db: DbDep, store: AdminStore):
     for p in products:
         writer.writerow(
             {
-                "name": p.name,
+                "name": csv_cell(p.name),
                 "price": _csv_value(p.price),
                 "compare_at_price": _csv_value(p.compare_at_price),
-                "category": p.category.name if p.category else "",
+                "category": csv_cell(p.category.name if p.category else ""),
                 "sku": _csv_value(p.sku),
                 "stock": _csv_value(p.stock),
                 "is_featured": _csv_value(p.is_featured),

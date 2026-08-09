@@ -5,6 +5,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import MutableHeaders
 
 from app.api.admin import categories as admin_categories
 from app.api.admin import broadcasts as admin_broadcasts
@@ -39,6 +40,41 @@ from app.core.logging import setup_logging
 from app.db.session import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
+
+
+class SecurityHeadersMiddleware:
+    """Add hardening response headers: CSP, nosniff, frame + referrer policy."""
+
+    _CSP = (
+        "default-src 'self'; "
+        "script-src 'self' https://telegram.org; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://telegram.org https://api.telegram.org; "
+        "font-src 'self' data:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'self'"
+    )
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["X-Content-Type-Options"] = "nosniff"
+                headers["X-Frame-Options"] = "SAMEORIGIN"
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+                headers["Content-Security-Policy"] = self._CSP
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
 
 
 async def _cart_reminder_loop() -> None:
@@ -86,6 +122,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(SecurityHeadersMiddleware)
     register_exception_handlers(app)
 
     app.include_router(health.router, prefix="/api")

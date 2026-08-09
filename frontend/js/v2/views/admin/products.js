@@ -47,7 +47,7 @@ export async function renderProducts(root) {
       list.appendChild(el(`<div class="empty"><span class="ico">&#128230;</span>No products found.</div>`));
     }
     for (const p of data.items) {
-      const img = p.images && p.images.length ? `<img src="${esc(p.images[0])}" style="width:48px;height:48px;border-radius:8px;object-fit:cover" onerror="this.remove()">` : `<div style="width:48px;height:48px;border-radius:8px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;color:var(--text-3)">&#128230;</div>`;
+      const img = p.images && p.images.length ? `<img src="${esc(p.images[0])}" style="width:48px;height:48px;border-radius:8px;object-fit:cover" data-err="remove">` : `<div style="width:48px;height:48px;border-radius:8px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;color:var(--text-3)">&#128230;</div>`;
       const row = el(`
         <div class="card" data-id="${p.id}" style="cursor:pointer">
           <div class="row">

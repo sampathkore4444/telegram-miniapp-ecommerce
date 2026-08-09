@@ -8,13 +8,13 @@ export async function renderBroadcasts(root) {
       <h1 class="title">Broadcast</h1>
       <div class="card">
         <div class="field">
-          <label>Message to all buyers</label>
-          <textarea class="input" id="msg" placeholder="Write a message to every active buyer…" maxlength="4000"></textarea>
+          <label>Message to your customers</label>
+          <textarea class="input" id="msg" placeholder="Write a message to every buyer who has ordered from this store…" maxlength="4000"></textarea>
         </div>
         <div class="small muted" style="margin-bottom:12px"><span id="count">0</span> / 4000 characters</div>
         <button class="btn btn-primary" id="send">Send broadcast</button>
       </div>
-      <p class="small muted" style="margin-top:4px">Only active buyers with a Telegram account receive the message. Admins are never included.</p>
+      <p class="small muted" style="margin-top:4px">Only buyers who have ordered from this store receive the message. Admins are never included.</p>
       <div id="result"></div>
     </div>`);
 

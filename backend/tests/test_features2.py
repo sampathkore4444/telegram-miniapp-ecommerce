@@ -1,6 +1,7 @@
 """Tests for feature batch 2: online payments, tracking, CSV exports,
 saved addresses, recently viewed, broadcasts and admin low-stock alerts."""
 
+from app.core.config import settings
 from app.core.security import create_access_token
 from app.db.session import AsyncSessionLocal
 from app.models import User
@@ -177,6 +178,31 @@ async def test_simulate_unknown_intent(client, buyer_auth, admin_auth):
         headers=buyer_auth,
     )
     assert resp.status_code == 404
+
+
+async def test_simulate_disabled_outside_dev(client, buyer_auth, admin_auth, monkeypatch):
+    """The sandbox self-approval endpoint must not exist outside dev/test —
+    including a deployed APP_ENV=development image with DEBUG off."""
+    for env in ("production", "development"):
+        monkeypatch.setattr(settings, "APP_ENV", env)
+        monkeypatch.setattr(settings, "DEBUG", False)
+        prod = await _mk_product(client, admin_auth, name=f"NoSim{env}", price=10, stock=3)
+        await client.post(
+            "/api/cart/add", json={"product_id": prod["id"], "quantity": 1}, headers=buyer_auth
+        )
+        order = (
+            await client.post(
+                "/api/orders/checkout", json=_checkout(payment_method="online"), headers=buyer_auth
+            )
+        ).json()
+        pay = (await client.post(f"/api/orders/{order['id']}/pay", headers=buyer_auth)).json()
+        resp = await client.post(
+            f"/api/orders/{order['id']}/pay/simulate",
+            json={"provider_ref": pay["provider_ref"], "approved": True},
+            headers=buyer_auth,
+        )
+        assert resp.status_code == 400
+        assert resp.json()["code"] == "simulation_disabled"
 
 
 # --- Order tracking ---------------------------------------------------------
@@ -388,6 +414,13 @@ async def test_broadcast_to_buyers(client, buyer_auth, admin_auth, monkeypatch):
 
     monkeypatch.setattr("app.api.admin.broadcasts.send_telegram_message", _send)
 
+    # A buyer becomes a customer by ordering from this store.
+    prod = await _mk_product(client, admin_auth, name="BroadcastMe", price=10, stock=5)
+    await client.post(
+        "/api/cart/add", json={"product_id": prod["id"], "quantity": 1}, headers=buyer_auth
+    )
+    await client.post("/api/orders/checkout", json=_checkout(), headers=buyer_auth)
+
     resp = await client.post(
         "/api/admin/broadcasts", json={"message": "Hello everyone!"}, headers=admin_auth
     )
@@ -397,6 +430,31 @@ async def test_broadcast_to_buyers(client, buyer_auth, admin_auth, monkeypatch):
     assert body["sent"] == 1
     assert len(sent) == 1
     assert "Hello everyone!" in sent[0][1]
+
+
+async def test_broadcast_scoped_to_store_customers(
+    client, buyer_auth, admin_auth, monkeypatch
+):
+    """A buyer who never ordered from this store must not receive its broadcast."""
+    sent = []
+
+    async def _send(chat_id, text, bot_token=None):
+        sent.append((chat_id, text))
+        return True
+
+    monkeypatch.setattr("app.api.admin.broadcasts.send_telegram_message", _send)
+
+    other_auth = await _other_buyer_auth()  # exists as a buyer, but never orders
+
+    resp = await client.post(
+        "/api/admin/broadcasts", json={"message": "Only customers!"}, headers=admin_auth
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total"] == 0
+    assert body["sent"] == 0
+    assert len(sent) == 0
+    assert other_auth  # other buyer still exists in the DB
 
 
 async def test_broadcast_admin_only(client, buyer_auth):

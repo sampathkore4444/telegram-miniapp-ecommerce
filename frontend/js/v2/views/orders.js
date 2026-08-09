@@ -56,7 +56,7 @@ export async function renderOrders(root) {
     for (const o of data.items) {
       const first = o.items[0];
       const img = first?.image_url
-        ? `<img src="${esc(first.image_url)}" style="width:54px;height:54px;border-radius:12px;object-fit:cover" onerror="this.remove()">`
+        ? `<img src="${esc(first.image_url)}" style="width:54px;height:54px;border-radius:12px;object-fit:cover" data-err="remove">`
         : `<div style="width:54px;height:54px;border-radius:12px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center">&#128230;</div>`;
       const row = el(`
         <div class="card order-card" data-id="${o.id}" style="cursor:pointer;--st:${STATUS_COLORS[o.status] || "var(--border)"};padding:12px">
