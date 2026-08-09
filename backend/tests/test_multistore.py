@@ -249,3 +249,48 @@ async def test_product_slug_collision_across_stores_allowed(client):
     p2 = await _mk_product(client, admin, name="Widget", headers=_h(admin, s2["slug"]))
     assert p1["slug"] == p2["slug"] == "widget"
     assert p1["id"] != p2["id"]
+
+
+# --- Public store directory ---------------------------------------------------
+
+
+async def test_public_directory_no_auth(client):
+    resp = await client.get("/api/stores")
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+
+async def test_public_directory_lists_active_stores_with_payload(client):
+    admin = await _login(client, "admin", "pro")
+    s2 = (
+        await client.post(
+            "/api/admin/stores", json={"name": "Second Shop"}, headers=admin
+        )
+    ).json()
+    await _mk_product(client, admin, name="Widget", headers=_h(admin, s2["slug"]))
+
+    resp = await client.get("/api/stores")
+    assert resp.status_code == 200, resp.text
+    stores = resp.json()
+    slugs = {s["slug"] for s in stores}
+    assert s2["slug"] in slugs
+    for s in stores:
+        assert set(s) == set(
+            ("id", "name", "slug", "store_name", "description", "product_count", "plan")
+        )
+        assert "is_active" not in s and "features" not in s
+
+    # stores with more products sort first
+    by_slug = {s["slug"]: s for s in stores}
+    assert by_slug[s2["slug"]]["product_count"] == 1
+
+
+async def test_public_directory_excludes_inactive_stores(client):
+    admin = await _login(client, "admin", "pro")
+    s1 = (await client.get("/api/admin/stores", headers=admin)).json()[0]
+    await client.patch(
+        f"/api/admin/stores/{s1['id']}", json={"is_active": False}, headers=admin
+    )
+    resp = await client.get("/api/stores")
+    slugs = {s["slug"] for s in resp.json()}
+    assert s1["slug"] not in slugs

@@ -81,7 +81,7 @@ Any cancellable state can be cancelled by buyer (`pending`, `pending_payment`, `
 
 ## API overview
 
-Public: `GET /api/products`, `GET /api/store`, `POST /api/auth/*`
+Public: `GET /api/products`, `GET /api/store`, `GET /api/stores` (buyer store directory), `POST /api/auth/*`
 Buyer (auth): `POST /api/auth/*`, `GET|POST|PATCH|DELETE /api/cart`, `POST /api/orders/checkout`, `GET /api/orders`, `GET /api/orders/{id}`, `POST /api/orders/{id}/cancel`, `POST /api/orders/{id}/payment-proof`
 Admin (owner): `/api/admin/dashboard`, `/api/admin/products`, `/api/admin/categories`, `/api/admin/orders`, `/api/admin/settings`, `/api/admin/uploads`
 

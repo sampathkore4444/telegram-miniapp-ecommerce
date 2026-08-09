@@ -1,5 +1,6 @@
 import { api, getToken } from "../api.js";
 import { el, esc, productCard, getStore, emptyState, toast, applyCountBadge } from "../ui.js";
+import { navigate } from "../router.js";
 import { t } from "../i18n.js";
 
 let state = { page: 1, pageSize: 12, category: "", search: "", sort: "newest", store: null, total: 0 };
@@ -16,6 +17,7 @@ export async function renderHome(root) {
         <img class="hero-logo" src="/img/shoptrolley.png?v=2" alt="${esc(store.store_name)}" />
         <h1>${esc(store.store_name)}</h1>
         <p>${esc(tagline)}</p>
+        <button class="btn btn-outline btn-sm" id="browse-stores" style="display:none;width:auto;margin-top:4px">&#127983; Browse stores</button>
       </header>
 
       <div id="recent" style="display:none"></div>
@@ -54,6 +56,13 @@ export async function renderHome(root) {
   const countEl = host.querySelector("#count");
   const clearBtn = host.querySelector("#search-clear");
   let debounce = null;
+
+  // Show a "Browse stores" entry when there is more than one store.
+  host.querySelector("#browse-stores").addEventListener("click", () => navigate("stores"));
+  try {
+    const dir = await api.get("/api/stores", false);
+    if (dir.length > 1) host.querySelector("#browse-stores").style.display = "";
+  } catch { /* directory unavailable */ }
 
   const toggleClear = () => {
     const hasText = host.querySelector("#search").value.length > 0;

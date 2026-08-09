@@ -22,7 +22,7 @@ class User(Base, TimestampMixin):
         index=True,
     )
     plan: Mapped[Plan] = mapped_column(
-        Enum(Plan, native_enum=False, length=16),
+        Enum(Plan, native_enum=False, length=16, values_callable=lambda e: [m.value for m in e]),
         default=Plan.STARTER,
         server_default=Plan.STARTER.value,
         index=True,

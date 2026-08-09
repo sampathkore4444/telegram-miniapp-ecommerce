@@ -48,6 +48,26 @@ export function storeSlugFromStartParam(initData) {
   }
 }
 
+// Telegram start_param -> hash route, "" if none. Handles store-scoped
+// deep links so shared product/order links land on the right store.
+// Supported: "store_<slug>", "product_<id>", "order_<id>", and the
+// store-scoped forms "store_<slug>_product_<id>" / "store_<slug>_order_<id>".
+export function startParamRoute(initData) {
+  if (!initData) return "";
+  try {
+    const start = (new URLSearchParams(initData).get("start_param") || "").trim();
+    let m = start.match(/^store_([a-z0-9-]+)_(product|order)_(\d+)$/);
+    if (m) return `s/${m[1]}/${m[2]}/${m[3]}`;
+    m = start.match(/^store_([a-z0-9-]+)$/);
+    if (m) return `s/${m[1]}`;
+    m = start.match(/^(product|order)_(\d+)$/);
+    if (m) return `${m[1]}/${m[2]}`;
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 // Shareable deep link to a store's home, e.g. #/s/my-shop.
 export function storeHomeHash(slug) {
   return slug ? `#/s/${encodeURIComponent(slug)}` : "#/home";

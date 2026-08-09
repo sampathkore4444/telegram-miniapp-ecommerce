@@ -1,5 +1,6 @@
 // Shared DOM/UI helpers and store settings cache.
 import { api } from "./api.js";
+import { getStoreSlug } from "./store.js";
 import { t, getLang, LANG_META } from "./i18n.js";
 
 export function el(html) {
@@ -191,7 +192,9 @@ export function applyCountBadge(count) {
 
 export function productDeepLink(productId, store) {
   const bot = store?.telegram_bot_username || "ShopTrolleyBot";
-  return `https://t.me/${bot}/${bot}?startapp=product_${productId}`;
+  const slug = store?.store?.slug || getStoreSlug();
+  const start = slug ? `store_${slug}_product_${productId}` : `product_${productId}`;
+  return `https://t.me/${bot}/${bot}?startapp=${start}`;
 }
 
 export function shareToTelegram(text, url) {

@@ -34,7 +34,10 @@ export async function renderDashboard(root) {
     <div class="container">
       <div class="row">
         <h1 class="title grow">Dashboard</h1>
-        <button class="btn btn-primary btn-sm" data-nav="admin/products">+ Product</button>
+        <div class="btn-row" style="margin:0">
+          <button class="btn btn-outline btn-sm" data-nav="admin/stores">Stores</button>
+          <button class="btn btn-primary btn-sm" data-nav="admin/products">+ Product</button>
+        </div>
       </div>
 
       <div class="kpi-grid">
@@ -102,7 +105,9 @@ export async function renderDashboard(root) {
   host.querySelectorAll("tr[data-id]").forEach((tr) => {
     tr.addEventListener("click", () => navigate(`admin/order/${tr.dataset.id}`));
   });
-  host.querySelector("[data-nav='admin/products']").addEventListener("click", () => navigate("admin/products"));
+  host.querySelectorAll("[data-nav]").forEach((b) => {
+    b.addEventListener("click", () => navigate(b.dataset.nav));
+  });
 
   root.innerHTML = "";
   root.appendChild(host);

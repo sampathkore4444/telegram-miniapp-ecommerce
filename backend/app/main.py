@@ -27,6 +27,7 @@ from app.api import (
     health,
     orders,
     products,
+    public_stores,
     reviews,
     store,
     users,
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(categories.router, prefix="/api")
     app.include_router(products.router, prefix="/api")
     app.include_router(store.router, prefix="/api")
+    app.include_router(public_stores.router, prefix="/api")
     app.include_router(cart.router, prefix="/api")
     app.include_router(orders.router, prefix="/api")
     app.include_router(coupons.router, prefix="/api")

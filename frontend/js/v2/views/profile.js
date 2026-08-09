@@ -46,12 +46,14 @@ export async function renderProfile(root) {
       <div class="card" style="padding:4px 14px">
         <button class="menu-item" data-nav="orders"><span class="menu-ico">&#128203;</span>${t("profile.my_orders")}<span class="menu-chev">›</span></button>
         <button class="menu-item" data-nav="wishlist"><span class="menu-ico">&#10084;&#65039;</span>${t("profile.wishlist")}<span class="menu-chev">›</span></button>
+        <button class="menu-item" data-nav="stores"><span class="menu-ico">&#127983;</span>Browse stores<span class="menu-chev">›</span></button>
       </div>` : ""}
 
       ${me.role === "admin" ? `
       <div class="card section-title">${t("profile.store_management")}</div>
       <div class="card" style="padding:4px 14px">
         <button class="menu-item" data-admin="admin"><span class="menu-ico">&#128200;</span>${t("profile.dashboard")}<span class="menu-chev">›</span></button>
+        <button class="menu-item" data-admin="admin/stores"><span class="menu-ico">&#127983;</span>Stores<span class="menu-chev">›</span></button>
         <button class="menu-item" data-admin="admin/products"><span class="menu-ico">&#128230;</span>${t("profile.products")}<span class="menu-chev">›</span></button>
         <button class="menu-item" data-admin="admin/orders"><span class="menu-ico">&#128203;</span>${t("profile.orders")}<span class="menu-chev">›</span></button>
         <button class="menu-item" data-admin="admin/customers"><span class="menu-ico">&#128101;</span>${t("profile.customers")}<span class="menu-chev">›</span></button>

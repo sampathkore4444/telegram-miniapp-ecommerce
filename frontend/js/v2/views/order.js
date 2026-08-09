@@ -1,6 +1,7 @@
 import { api } from "../api.js";
 import { navigate } from "../router.js";
 import { el, esc, money, getStore, statusBadge, fmtDate, toast, modal, shareToTelegram, applyCountBadge } from "../ui.js";
+import { getStoreSlug } from "../store.js";
 import { t } from "../i18n.js";
 
 export async function renderOrder(root, params) {
@@ -150,7 +151,9 @@ export async function renderOrder(root, params) {
   });
   host.querySelector("#share")?.addEventListener("click", () => {
     const bot = store?.telegram_bot_username || "ShopTrolleyBot";
-    const link = `https://t.me/${bot}/${bot}?startapp=order_${order.id}`;
+    const slug = store?.store?.slug || getStoreSlug();
+    const start = slug ? `store_${slug}_order_${order.id}` : `order_${order.id}`;
+    const link = `https://t.me/${bot}/${bot}?startapp=${start}`;
     shareToTelegram(t("order.share_text", { number: order.order_number, total: money(order.total, store), store: store.store_name }), link);
   });
   host.querySelector("#cancel")?.addEventListener("click", async () => {
