@@ -1,9 +1,10 @@
 // Hash-based router for the SPA.
 import { t } from "./i18n.js";
-import { setStoreSlug, parseStoreHash } from "./store.js";
+import { setStoreSlug, getStoreSlug, parseStoreHash } from "./store.js";
 
 const routes = new Map();
 let current = null;
+let renderFn = null;
 
 export function registerRoute(pattern, handler, { title, titleKey } = {}) {
   routes.set(pattern, { handler, title, titleKey });
@@ -50,7 +51,28 @@ export function navigate(path) {
 }
 
 export function startRouter(root) {
-  const render = async () => {
+  // Renders are serialized through a promise chain so two overlapping renders
+  // (e.g. a store change fires a second hashchange while the first render is
+  // still running) can never both append their content to the DOM. Identical
+  // renders that are already queued/running are collapsed into one.
+  let chain = Promise.resolve();
+  let seq = 0;
+  let pendingId = null;
+  let queuedKey = null;
+
+  const keyForCurrentHash = () => {
+    const storePart = parseStoreHash(window.location.hash);
+    const slug = storePart ? storePart.slug : getStoreSlug();
+    const segments = storePart
+      ? storePart.rest
+      : window.location.hash
+          .replace(/^#\/?/, "")
+          .split("/")
+          .filter((s) => Boolean(s) && !/^tgWebApp/.test(s));
+    return `${slug}|${segments.length ? segments.join("/") : "home"}`;
+  };
+
+  const renderOne = async () => {
     const segments = parseHash();
     const { name, params, spec } = match(segments);
     if (!spec) {
@@ -61,18 +83,42 @@ export function startRouter(root) {
     const rt = routeTitle(spec);
     document.title = rt ? `${rt} · Telegram Shop` : "Telegram Shop";
     root.dataset.route = name;
-    try {
-      await spec.handler(root, params);
-    } catch (err) {
-      console.error("view error", err);
-      root.innerHTML = `<div class="empty"><span class="ico">&#9888;</span><p>Something went wrong.</p><p class="small muted">${err.message}</p></div>`;
-    }
+    await spec.handler(root, params);
     window.scrollTo(0, 0);
     highlightNav();
   };
 
-  window.addEventListener("hashchange", render);
+  const render = (force = false) => {
+    const key = keyForCurrentHash();
+    const id = ++seq;
+    if (!force && pendingId !== null && queuedKey === key) return chain;
+    queuedKey = key;
+    pendingId = id;
+    chain = chain.then(async () => {
+      try {
+        await renderOne();
+      } catch (err) {
+        console.error("view error", err);
+        root.innerHTML = `<div class="empty"><span class="ico">&#9888;</span><p>Something went wrong.</p><p class="small muted">${err.message}</p></div>`;
+      } finally {
+        if (pendingId === id) {
+          pendingId = null;
+          queuedKey = null;
+        }
+      }
+    });
+    return chain;
+  };
+
+  renderFn = render;
+  window.addEventListener("hashchange", () => render());
   render();
+}
+
+// Re-render the current view even when the route/store hasn't changed
+// (e.g. after a language switch). Bypasses the duplicate-render guard.
+export function forceRender() {
+  if (renderFn) renderFn(true);
 }
 
 export function currentRoute() {

@@ -18,12 +18,8 @@ export function initTelegram() {
     tg.ready();
     tg.expand();
     document.documentElement.dataset.scheme = tg.colorScheme || "light";
-    const h = tg.themeParams;
-    if (h?.bg_color) document.documentElement.style.setProperty("--bg", h.bg_color);
-    if (h?.text_color) document.documentElement.style.setProperty("--text", h.text_color);
-    if (h?.hint_color) document.documentElement.style.setProperty("--text-2", h.hint_color);
-    if (h?.button_color) document.documentElement.style.setProperty("--accent", h.button_color);
-    if (h?.secondary_bg_color) document.documentElement.style.setProperty("--bg-soft", h.secondary_bg_color);
+    // Use the app's designed palette (light/dark CSS variables) rather than
+    // adopting the user's Telegram theme colors, for a consistent brand look.
   } catch { /* noop */ }
 }
 

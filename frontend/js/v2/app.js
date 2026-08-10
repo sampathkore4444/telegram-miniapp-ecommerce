@@ -1,6 +1,6 @@
 import { initTelegram, telegram, isTelegramAvailable, loginWithTelegram, loginDemo, logout, currentUser, isAdmin, refreshUser } from "./auth.js";
 import { api, getStoredUser, getToken as apiGetToken } from "./api.js";
-import { registerRoute, navigate, startRouter } from "./router.js";
+import { registerRoute, navigate, startRouter, forceRender } from "./router.js";
 import { toast, applyCountBadge, clearStoreCache, esc, getStore } from "./ui.js";
 import { t, getLang, LANG_META } from "./i18n.js";
 import { getStoreSlug, setStoreSlug, storeSlugFromStartParam, startParamRoute, parseStoreHash } from "./store.js";
@@ -232,7 +232,7 @@ async function boot() {
 
   window.addEventListener("langchange", () => {
     applyLangUI();
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    forceRender();
   });
 
   registerRoutes();
