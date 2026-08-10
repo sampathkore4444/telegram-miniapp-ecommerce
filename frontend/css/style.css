@@ -403,6 +403,7 @@ textarea.input { min-height: 84px; resize: vertical; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* ---------- Store directory cards ---------- */
+.store-list { display: flex; flex-direction: column; gap: 10px; }
 .store-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -411,11 +412,32 @@ textarea.input { min-height: 84px; resize: vertical; }
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 12px;
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
-.store-card:active { transform: scale(0.975); }
+.store-card:active { transform: scale(0.985); }
+.store-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--grad);
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(67, 56, 202, 0.3);
+}
+.store-chev {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
 .store-card .pname {
   font-size: 15px;
   font-weight: 700;
@@ -431,7 +453,6 @@ textarea.input { min-height: 84px; resize: vertical; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.store-card .store-visit { width: 100%; }
 
 .product-card {
   background: var(--card);
@@ -545,18 +566,26 @@ textarea.input { min-height: 84px; resize: vertical; }
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
 }
+.hero-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .hero-logo {
-  display: block;
-  width: 72px;
-  height: auto;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
   border-radius: 10px;
   background: #fff;
-  padding: 5px;
+  padding: 4px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
-  margin-bottom: 12px;
+  flex-shrink: 0;
 }
-.hero h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; position: relative; z-index: 1; }
-.hero p { font-size: 13.5px; opacity: 0.92; margin-top: 5px; position: relative; z-index: 1; line-height: 1.45; }
+.hero-text { min-width: 0; }
+.hero h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; position: relative; z-index: 1; line-height: 1.2; }
+.hero p { font-size: 13px; opacity: 0.92; margin-top: 4px; position: relative; z-index: 1; line-height: 1.45; }
 
 .search-wrap { margin: -6px 0 14px; z-index: 3; }
 .search-field { position: relative; }

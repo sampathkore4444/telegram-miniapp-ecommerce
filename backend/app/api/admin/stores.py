@@ -103,6 +103,14 @@ async def admin_update_store(
         data["slug"] = await _unique_store_slug(db, slug, exclude_id=store.id)
     for key, value in data.items():
         setattr(store, key, value)
+    if store.name:
+        settings = (
+            await db.execute(
+                select(StoreSettings).where(StoreSettings.store_id == store.id)
+            )
+        ).scalar_one_or_none()
+        if settings is not None and settings.store_name != store.name:
+            settings.store_name = store.name
     await db.commit()
     await db.refresh(store)
     return await _public(db, store)

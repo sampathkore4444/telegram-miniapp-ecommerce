@@ -18,7 +18,7 @@ export async function renderStoresDirectory(root) {
     <div class="container">
       <h1 class="title">Browse stores</h1>
       <p class="muted small" style="margin-bottom:12px">Pick a store to start shopping.</p>
-      <div id="store-list" class="grid-2"></div>
+      <div id="store-list" class="store-list"></div>
     </div>`);
 
   const list = host.querySelector("#store-list");
@@ -27,24 +27,22 @@ export async function renderStoresDirectory(root) {
     list.appendChild(emptyState("&#127983;", "No stores yet", "Come back later."));
   }
   for (const s of stores) {
+    const initials = String(s.store_name || s.name || "S").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
     const card = el(`
       <div class="store-card" data-slug="${esc(s.slug)}">
-        <div class="store-card-body">
+        <div class="store-avatar">${esc(initials)}</div>
+        <div class="grow" style="min-width:0">
           <div class="pname">${esc(s.store_name || s.name)}</div>
           ${s.description ? `<div class="small muted store-desc">${esc(s.description)}</div>` : ""}
-          <div class="small muted">${s.product_count} product(s)</div>
+          <div class="small muted" style="margin-top:2px">${s.product_count} product(s)</div>
         </div>
-        <button class="btn btn-outline btn-sm store-visit">Visit store</button>
+        <span class="store-chev">&#8250;</span>
       </div>`);
     const open = () => {
       setStoreSlug(s.slug);
       navigate("home");
     };
     card.addEventListener("click", open);
-    card.querySelector(".store-visit").addEventListener("click", (e) => {
-      e.stopPropagation();
-      open();
-    });
     list.appendChild(card);
   }
 

@@ -46,6 +46,7 @@ export async function renderStores(root) {
             <div class="btn-row" style="margin:0">
               <button class="btn btn-sm btn-outline" data-open>Open</button>
               ${isCurrent ? "" : `<button class="btn btn-sm btn-primary" data-switch>Manage</button>`}
+              <button class="btn btn-sm btn-outline" data-rename>Rename</button>
               <button class="btn btn-sm btn-danger" data-del>Delete</button>
             </div>
           </div>
@@ -55,6 +56,7 @@ export async function renderStores(root) {
         setStoreSlug(s.slug);
         navigate("admin");
       });
+      row.querySelector("[data-rename]").addEventListener("click", () => openRename(s));
       row.querySelector("[data-del]").addEventListener("click", async () => {
         const ok = await confirmBox(`Delete store "${s.name}"? This can't be undone.`, "Delete store");
         if (!ok) return;
@@ -109,6 +111,40 @@ export async function renderStores(root) {
   }
 
   host.querySelector("#new-store")?.addEventListener("click", openNewStore);
+
+  function openRename(s) {
+    const body = el(`
+      <div>
+        <div class="field"><label>Store name *</label><input class="input" id="s-name" maxlength="120" value="${esc(s.name)}" /></div>
+        <div class="field"><label>Slug (link)</label><input class="input" id="s-slug" maxlength="120" value="${esc(s.slug)}" /></div>
+        <p class="small muted">The slug becomes your store's link — e.g. <code>/s/<b id="s-preview">${esc(s.slug)}</b></code>. Use lowercase letters, numbers and dashes.</p>
+      </div>`);
+    const name = body.querySelector("#s-name");
+    const slug = body.querySelector("#s-slug");
+    const preview = body.querySelector("#s-preview");
+    const cleanSlug = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const updatePreview = () => { preview.textContent = cleanSlug(slug.value) || "auto-generated"; };
+    slug.addEventListener("input", updatePreview);
+    modal({
+      title: "Rename store",
+      body,
+      okText: "Save",
+      onOk: async () => {
+        const storeName = name.value.trim();
+        if (!storeName) throw new Error("Store name is required");
+        const updated = await api.patch(`/api/admin/stores/${s.id}`, {
+          name: storeName,
+          slug: cleanSlug(slug.value) || null,
+        });
+        s.name = updated.name;
+        s.slug = updated.slug;
+        if (s.slug === getStoreSlug()) setStoreSlug(s.slug);
+        toast("Store renamed", "success");
+        renderList();
+      },
+    });
+  }
+
   root.innerHTML = "";
   root.appendChild(host);
   renderList();
